@@ -31,39 +31,44 @@ val Success(matches_ab_val, _) = parseAll(exp, matches_ab_src)
 val Success(matchesc_ab_val, _) = parseAll(exp, matchesc_ab_src)
 
 val matches_bis_poly_src = """
-(let match_loop (lambda match_loop m (lambda _ s
-  (if (equs 'yes (m s))
-      'yes
-      (if (equs 'done (car s))
-          'no
-         ((match_loop m) (cdr s))))))
-(let star_loop (lambda star_loop m (lambda _ c (lambda _ s
-  (if (equs 'yes (m s))
-      'yes
-      (if (equs 'done (car s))
-          'no
+(let match_loop (lambda match_loop m (maybe-lift (lambda _ s
+  (if (equs (maybe-lift 'yes) (m s))
+      (maybe-lift 'yes)
+      (if (equs (maybe-lift 'done) (car s))
+          (maybe-lift 'no)
+         ((match_loop m) (cdr s)))))))
+(let star_loop (lambda star_loop m (lambda _ c (maybe-lift (lambda _ s
+  (if (equs (maybe-lift 'yes) (m s))
+      (maybe-lift 'yes)
+      (if (equs (maybe-lift 'done) (car s))
+          (maybe-lift 'no)
           (if (equs '_ c)
               (((star_loop m) c) (cdr s))
-              (if (equs c (car s))
+              (if (equs (maybe-lift c) (car s))
                  (((star_loop m) c) (cdr s))
-                 'no)))))))
+                 (maybe-lift 'no)))))))))
 (let match_here (lambda match_here r
-  (if (equs 'done (car r)) (lambda _ s 'yes)
+  (if (equs 'done (car r)) (maybe-lift (lambda _ s (maybe-lift 'yes)))
   (let m (if (equs '_ (car r))
-               (lambda _ s (if (equs 'done (car s)) 'no ((match_here (cdr r)) (cdr s))))
-               (lambda _ s (if (equs 'done (car s)) 'no
-                          (if (equs (car r) (car s))
+ (maybe-lift (lambda _ s (if (equs (maybe-lift 'done) (car s))
+                          (maybe-lift 'no)
+                          ((match_here (cdr r)) (cdr s)))))
+ (maybe-lift (lambda _ s (if (equs (maybe-lift 'done) (car s))
+                          (maybe-lift 'no)
+                          (if (equs (maybe-lift (car r)) (car s))
                               ((match_here (cdr r)) (cdr s))
-                              'no))))
+                              (maybe-lift 'no))))))
     (if (equs 'done (car (cdr r)))
         (if (equs '$ (car r))
-            (lambda _ s (if (equs 'done (car s)) 'yes 'no))
+            (maybe-lift (lambda _ s (if (equs (maybe-lift 'done) (car s))
+                       (maybe-lift 'yes)
+                       (maybe-lift 'no))))
             m)
     (if (equs '* (car (cdr r)))
         ((star_loop (match_here (cdr (cdr r)))) (car r))
         m)))))
 (let match (lambda match r
-  (if (equs 'done (car r)) (lambda _ s 'yes)
+  (if (equs 'done (car r)) (maybe-lift (lambda _ s (maybe-lift 'yes)))
       (if (equs '^ (car r))
           (match_here (cdr r))
           (match_loop (match_here r)))))
@@ -94,7 +99,8 @@ def testMatchesBis() = {
       App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Var(2))
     ))(e)
 
-    val d = reifyc { evalms(List(re,matchesc_val,eval_val),App(App(App(eval_exp,Var(1)),Sym("nil-env")), Var(0))) }
+    val d = reifyc { evalms(List(re,matchesc_bis_val,eval_val),App(App(App(eval_exp,Var(1)),Sym("nil-env")), Var(0))) }
+    println(pretty(d, Nil))
     val r = run { val m = evalms(Nil,d); evalms(List(m, s), App(Var(0), Var(1))) }
     check(r)(e)
   }
