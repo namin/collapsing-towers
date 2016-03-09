@@ -9,6 +9,8 @@ object TestMain {
     testFac1()
     testEval()
 
+    Matches
+
     println("done")
   }
 

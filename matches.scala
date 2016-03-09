@@ -4,11 +4,13 @@ import Base._
 import Lisp._
 import Lisp.parser._
 
-val matches_poly_src = """(lambda matches r (maybe-lift (lambda _ s
+val matches_poly_src = """(let matches (lambda matches r (lambda _ s
   (if (equs 'done (car r)) (maybe-lift 'yes)
     (if (equs (maybe-lift 'done) (car s)) (maybe-lift 'no)
-      (if (equs (maybe-lift (car r)) (car s)) ((matches (cdr r)) (cdr s)) (maybe-lift 'no)))))))
+      (if (equs (maybe-lift (car r)) (car s)) ((matches (cdr r)) (cdr s)) (maybe-lift 'no))))))
+  (lambda _ r (maybe-lift (lambda _ s ((matches r) s)))))
 """
+
 
 val matches_src = matches_poly_src.replace("maybe-lift", "nolift")
 val matchesc_src = matches_poly_src.replace("maybe-lift", "lift")
