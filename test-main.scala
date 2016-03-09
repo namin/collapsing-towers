@@ -1,6 +1,7 @@
 object TestMain {
   import Base._
   import Lisp._
+  import Matches._
   def main(args: Array[String]) {
     testBasic()
     testAck1()
@@ -9,7 +10,7 @@ object TestMain {
     testFac1()
     testEval()
 
-    Matches
+    testMatches()
 
     println("done")
   }
