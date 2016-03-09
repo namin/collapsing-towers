@@ -102,8 +102,16 @@ object Lisp {
     replace("(caddr exp)","(car (cdr (cdr exp)))").
     replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
 
+  val eval_vc_poly_src = s"""(lambda _ c
+${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (refRead c) (maybe-lift 1))) (maybe-lift 0)) (env exp))")}
+)
+"""
+
   val eval_src = eval_poly_src.replace("maybe-lift","nolift") // plain interpreter
   val evalc_src = eval_poly_src.replace("maybe-lift","lift")  // generating extension = compiler
+
+  val eval_vc_src = eval_vc_poly_src.replace("maybe-lift","nolift") // plain interpreter
+  val evalc_vc_src = eval_vc_poly_src.replace("maybe-lift","lift")  // generating extension = compiler
 
   // TODO: next step: take maybe-lift as parameter instead of simulating macros
 
@@ -113,18 +121,23 @@ object Lisp {
   val Success(mut_val, _) = parseAll(exp, mut_src)
   val Success(eval_val, _) = parseAll(exp, eval_src)
   val Success(evalc_val, _) = parseAll(exp, evalc_src)
-
+  val Success(eval_vc_val, _) = parseAll(exp, eval_vc_src)
+  val Success(evalc_vc_val, _) = parseAll(exp, evalc_vc_src)
 
 
   val fac_exp = trans(fac_val,List("arg"))
   val mut_exp = trans(mut_val,List("arg"))
   val eval_exp = trans(eval_val,List("arg","arg2"))
   val evalc_exp = trans(evalc_val,List("arg","arg2"))
+  val eval_vc_exp = trans(eval_vc_val,List("arg","arg2", "arg3"))
+  val evalc_vc_exp = trans(evalc_vc_val,List("arg","arg2", "arg3"))
 
   val fac_exp_anf = reify { anf(List(Sym("XX")),fac_exp) }
   val mut_exp_anf = reify { anf(List(Sym("XX")),mut_exp) }
   val eval_exp_anf = reify { anf(List(Sym("XX"),Sym("XX")),eval_exp) }
   val evalc_exp_anf = reify { anf(List(Sym("XX"),Sym("XX")),evalc_exp) }
+  val eval_vc_exp_anf = reify { anf(List(Sym("XX"),Sym("XX"),Sym("XX")),eval_vc_exp) }
+  val evalc_vc_exp_anf = reify { anf(List(Sym("XX"),Sym("XX"),Sym("XX")),evalc_vc_exp) }
 
 
   // ********************* test cases *********************
@@ -358,4 +371,12 @@ object Lisp {
     check(c6)(mut_exp_anf.toString)
   }
 
+  def testMutInEval() = {
+    println("// ------- test mutation in eval --------")
+    val counter_cell = new Cell(Cst(0))
+    val r1 = run { evalms(List(fac_val,eval_val,counter_cell),
+      App(App(App(App(eval_vc_exp,Var(2)),Var(0)),Sym("nil-env")),Lit(4))) }
+    check(r1)("Cst(24)")
+    check(counter_cell.v)("Cst(13)")
+  }
 }
