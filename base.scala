@@ -610,6 +610,18 @@ object TestMeta3 {
     // (evalms ((eval evalc) fac)) = fac
     // (evalms ((eval evalc) eval) = eval
     // (evalms ((eval evalc) evalc) = evalc
+
+
+    // -----------------------------------------------
+    // triple interpretation!!
+
+    val eval_exp3 = trans(eval_val,List("arg","arg2","arg3")) // need three slots in env...
+
+    // triple eval fac ... (evalms (((eval eval) evalc) fac)) = fac
+    val c6 = reifyc { evalms(List(evalc_val,eval_val,fac_val), 
+      App(App(App(App(App(App(App(App(eval_exp3,Var(1)),Sym("nil-env")), Var(1)), Sym("nil-env2")), Var(0)), Sym("nil-env3")), Var(2)), Sym("nil-env4"))) }
+
+    check(c6)(fac_exp_anf.toString)
   }
 
 
