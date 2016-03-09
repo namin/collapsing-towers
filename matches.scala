@@ -18,9 +18,6 @@ val matchesc_src = matches_poly_src.replace("maybe-lift", "lift")
 val Success(matches_val, _) = parseAll(exp, matches_src)
 val Success(matchesc_val, _) = parseAll(exp, matchesc_src)
 
-val matches_exp = trans(matches_val, List("arg", "arg2"))
-val matchesc_exp = trans(matchesc_val, List("arg", "arg2"))
-
 val Success(ab_val, _) = parseAll(exp, """(a b done)""")
 val Success(ac_val, _) = parseAll(exp, """(a c done)""")
 
