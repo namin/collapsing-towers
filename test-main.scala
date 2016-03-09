@@ -11,6 +11,7 @@ object TestMain {
     testEval()
 
     testMatches()
+    testMatchesBis()
 
     println("done")
   }

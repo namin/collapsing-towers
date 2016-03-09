@@ -83,6 +83,7 @@ val Success(abba_val, _) = parseAll(exp, """(a b b a done)""")
 val Success(abca_val, _) = parseAll(exp, """(a b c a done)""")
 
 def testMatchesBis() = {
+  println("// ------- test matches bis --------")
   def test1(re: Val, s: Val, e: Boolean) = {
     check(evalms(List(matches_bis_val, re, s),
       App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Var(2))
