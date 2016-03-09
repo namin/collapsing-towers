@@ -30,7 +30,7 @@ val matchesc_ab_src = matches_ab_poly_src.replace("maybe-lift", "lift")
 val Success(matches_ab_val, _) = parseAll(exp, matches_ab_src)
 val Success(matchesc_ab_val, _) = parseAll(exp, matchesc_ab_src)
 
-val matches_bis_src = """
+val matches_bis_poly_src = """
 (let match_loop (lambda match_loop m (lambda _ s
   (if (equs 'yes (m s))
       'yes
@@ -70,7 +70,11 @@ val matches_bis_src = """
 match))))
 """
 
+val matches_bis_src = matches_bis_poly_src.replace("maybe-lift", "nolift")
+val matchesc_bis_src = matches_bis_poly_src.replace("maybe-lift", "lift")
+
 val Success(matches_bis_val, _) = parseAll(exp, matches_bis_src)
+val Success(matchesc_bis_val, _) = parseAll(exp, matchesc_bis_src)
 
 val Success(a__val, _) = parseAll(exp, """(^ a _ $ done)""")
 
@@ -84,10 +88,15 @@ val Success(abca_val, _) = parseAll(exp, """(a b c a done)""")
 
 def testMatchesBis() = {
   println("// ------- test matches bis --------")
-  def test1(re: Val, s: Val, e: Boolean) = {
+  def test1(re: Val, s: Val, b: Boolean) = {
+    val e = if (b) "Str(yes)" else "Str(no)"
     check(evalms(List(matches_bis_val, re, s),
       App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Var(2))
-    ))(if (e) "Str(yes)" else "Str(no)")
+    ))(e)
+
+    val d = reifyc { evalms(List(re,matchesc_val,eval_val),App(App(App(eval_exp,Var(1)),Sym("nil-env")), Var(0))) }
+    val r = run { val m = evalms(Nil,d); evalms(List(m, s), App(Var(0), Var(1))) }
+    check(r)(e)
   }
   test1(ab_val, ab_val, true)
   test1(ab_val, ac_val, false)
