@@ -100,7 +100,7 @@ def testMatchesBis() = {
     ))(e)
 
     val d = reifyc { evalms(List(re,matchesc_bis_val,eval_val),App(App(App(eval_exp,Var(1)),Sym("nil-env")), Var(0))) }
-    println(pretty(d, Nil))
+    //println(pretty(d, Nil))
     val r = run { val m = evalms(Nil,d); evalms(List(m, s), App(Var(0), Var(1))) }
     check(r)(e)
   }

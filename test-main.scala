@@ -10,6 +10,7 @@ object TestMain {
     testFac1()
     testEval()
     testMutEval()
+    testMutInEval()
 
     testMatches()
     testMatchesBis()
