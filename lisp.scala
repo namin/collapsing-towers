@@ -44,7 +44,7 @@ object Lisp {
 
   def trans(e: Val, env: List[String]): Exp = e match {
     case Cst(n) => Lit(n)
-    case Str(s) => Var(env.lastIndexOf(s))
+    case Str(s) => val i = env.lastIndexOf(s); assert(i>=0, s); Var(i)
     case Tup(Str("quote"),Tup(Str(s),N)) => Sym(s)
     case Tup(Str("+"),Tup(a,Tup(b,N))) => Plus(trans(a,env),trans(b,env))
     case Tup(Str("-"),Tup(a,Tup(b,N))) => Minus(trans(a,env),trans(b,env))
@@ -61,6 +61,9 @@ object Lisp {
     case Tup(Str("lift"),Tup(a,N)) => Lift(trans(a,env))
     case Tup(Str("nolift"),Tup(a,N)) => trans(a,env)
     case Tup(Str("equs"),Tup(a,Tup(b,N))) => Equs(trans(a,env),trans(b,env))
+    case Tup(Str("refNew"),Tup(a,N)) => RefNew(trans(a,env))
+    case Tup(Str("refRead"),Tup(a,N)) => RefRead(trans(a,env))
+    case Tup(Str("refWrite"),Tup(a,Tup(e,N))) => RefWrite(trans(a,env),trans(e,env))
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
   }
 
@@ -88,12 +91,15 @@ object Lisp {
       (if (equs 'car    (car exp))      (car ((eval (cadr exp)) env))
       (if (equs 'cdr    (car exp))      (cdr ((eval (cadr exp)) env))
       (if (equs 'quote  (car exp))      (maybe-lift (cadr exp))
-      ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))
+      (if (equs 'refNew (car exp))      (refNew ((eval (cadr exp)) env))
+      (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
+      (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+      ((env (car exp)) ((eval (cadr exp)) env)))))))))))))))))))
     (((eval (car exp)) env) ((eval (cadr exp)) env))
-    )))))
-  """.replace("(cadr exp)","(car (cdr exp))")
-     .replace("(caddr exp)","(car (cdr (cdr exp)))")
-     .replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
+    )))))""".
+    replace("(cadr exp)","(car (cdr exp))").
+    replace("(caddr exp)","(car (cdr (cdr exp)))").
+    replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
 
   val eval_src = eval_poly_src.replace("maybe-lift","nolift") // plain interpreter
   val evalc_src = eval_poly_src.replace("maybe-lift","lift")  // generating extension = compiler

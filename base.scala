@@ -21,6 +21,9 @@ object Base {
   case class IsStr(a:Exp) extends Exp
   case class IsPair(a:Exp) extends Exp
   case object Tic extends Exp
+  case class RefNew(e:Exp) extends Exp
+  case class RefRead(a:Exp) extends Exp
+  case class RefWrite(a:Exp,e:Exp) extends Exp
 
   case class Lift(e:Exp) extends Exp
   case object Tic2 extends Exp
@@ -33,6 +36,7 @@ object Base {
   case class Str(s:String) extends Val
   case class Clo(env:Env,e:Exp) extends Val //{ override def toString="CLO"}
   case class Tup(v1:Val,v2:Val) extends Val
+  class Cell(var v: Val) extends Val
 
   case class Code(e:Exp) extends Val
 
@@ -53,6 +57,14 @@ object Base {
       eval(env:+v1,e2)
     case Tic => 
       Cst(tick())
+    case RefNew(e) =>
+      new Cell(eval(env,e))
+    case RefRead(a) => eval(env,a) match {
+      case (c:Cell) => c.v
+    }
+    case RefWrite(a, e) => eval(env,a) match {
+      case (c:Cell) => c.v = eval(env,e); c
+    }
   }
 
   var stFresh = 0
@@ -111,6 +123,12 @@ object Base {
       reflect(Lift(anf(env,e)))
     case Tic => 
       reflect(Tic)
+    case RefNew(e) =>
+      reflect(RefNew(anf(env,e)))
+    case RefRead(a) =>
+      reflect(RefRead(anf(env,a)))
+    case RefWrite(a, e) =>
+      reflect(RefWrite(anf(env,a),anf(env,e)))
   }
 
 
@@ -154,6 +172,19 @@ object Base {
       evalms(env:+v1,e2)
     case Tic => 
       Cst(tick())
+
+    case RefNew(e) => evalms(env,e) match {
+      case Code(c1) => reflectc(RefNew(c1))
+      case v => new Cell(v)
+    }
+    case RefRead(a) => evalms(env,a) match {
+      case (c:Cell) => c.v
+      case Code(c1) => reflectc(RefRead(c1))
+    }
+    case RefWrite(a,e) => (evalms(env,a),evalms(env,e)) match {
+      case (c:Cell,v) => c.v = v; c
+      case (Code(c),Code(c1)) => reflectc(RefWrite(c,c1))
+    }
 
     case Lift(e) => 
       Code(lift(evalms(env,e)))
