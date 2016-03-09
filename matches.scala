@@ -11,6 +11,14 @@ val matches_poly_src = """(let matches (lambda matches r (lambda _ s
   (lambda _ r (maybe-lift (lambda _ s ((matches r) s)))))
 """
 
+val matchesc_mini_src = """(let matches (lambda matches r (lambda _ s
+  (if (equs 'done (car r)) 'yes
+    (if (equs 'done (car s)) 'no
+      (if (equs (car r) (car s)) ((matches (cdr r)) (cdr s)) 'no)))))
+  (lambda _ r (lift (lambda _ s ((matches r) s)))))
+"""
+val Success(matchesc_mini_val, _) = parseAll(exp, matchesc_mini_src)
+
 val matches_src = matches_poly_src.replace("maybe-lift", "nolift")
 val matchesc_src = matches_poly_src.replace("maybe-lift", "lift")
 
@@ -152,6 +160,10 @@ check(pretty(d3, Nil))(expected)
 // "direct" generation
 val d4 = reifyc { evalms(List(ab_val,matchesc_val,eval_val),App(App(App(eval_exp,Var(1)),Sym("nil-env")), Var(0))) }
 check(pretty(d4, Nil))(expected)
+
+// the minimally-lifted also works
+val e4 = reifyc { evalms(List(ab_val,matchesc_mini_val,eval_val),App(App(App(eval_exp,Var(1)),Sym("nil-env")), Var(0))) }
+check(pretty(e4, Nil))(expected)
 
 // different interpretation
 val r5 = run { evalms(List(ab_val,matches_ab_val,eval_val),App(App(App(eval_exp,Var(1)),Sym("nil-env")), Var(0))) }

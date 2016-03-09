@@ -136,7 +136,10 @@ object Base {
   }
 
 
-  def reifyc(f: => Val) = reify { val Code(e) = f; e }
+  def reifyc(f: => Val) = reify { f match {
+    case Code(e) => e
+    case r => lift(r)
+  }}
   def reflectc(s: Exp) = Code(reflect(s))
 
   // NBE-style 'reify' operator (semantics -> syntax)
@@ -166,6 +169,15 @@ object Base {
       // If we would like to support more, we need to return Lift(e)
   }
 
+  object SomeCode {
+    def unapply(vs: (Val, Val)): Option[(Exp,Exp)] = vs  match {
+      case (Code(s1),Code(s2)) => Some((s1,s2))
+      case (Code(s1),v2) => Some((s1,lift(v2)))
+      case (v1,Code(s2)) => Some((lift(v1),s2))
+      case _ => None
+    }
+  }
+
   // multi-stage evaluation
   def evalms(env: Env, e: Exp): Val = e match {
     case Lit(n) => Cst(n)
@@ -188,7 +200,7 @@ object Base {
     }
     case RefWrite(a,e) => (evalms(env,a),evalms(env,e)) match {
       case (c:Cell,v) => c.v = v; c
-      case (Code(c),Code(c1)) => reflectc(RefWrite(c,c1))
+      case SomeCode(c,c1) => reflectc(RefWrite(c,c1))
     }
     case RefExt(c) => c
 
@@ -201,7 +213,7 @@ object Base {
       (evalms(env,e1), evalms(env,e2)) match {
         case (Clo(env3,e3), v2) => 
           evalms(env3:+Clo(env3,e3):+v2,e3)
-        case (Code(s1), Code(s2)) =>
+        case SomeCode(s1,s2) =>
           Code(reflect(App(s1,s2)))
       }
 
@@ -217,28 +229,28 @@ object Base {
       (evalms(env,e1), evalms(env,e2)) match {
         case (Cst(n1), Cst(n2)) =>
           Cst(n1+n2)
-        case (Code(s1),Code(s2)) =>
+        case SomeCode(s1,s2) =>
           reflectc(Plus(s1,s2))
       }
     case Minus(e1,e2) =>
       (evalms(env,e1), evalms(env,e2)) match {
         case (Cst(n1), Cst(n2)) =>
           Cst(n1-n2)
-        case (Code(s1),Code(s2)) =>
+        case SomeCode(s1,s2) =>
           reflectc(Minus(s1,s2))
       }
     case Times(e1,e2) =>
       (evalms(env,e1), evalms(env,e2)) match {
         case (Cst(n1), Cst(n2)) =>
           Cst(n1*n2)
-        case (Code(s1),Code(s2)) =>
+        case SomeCode(s1,s2) =>
           reflectc(Times(s1,s2))
       }
     case Equs(e1,e2) =>
       (evalms(env,e1), evalms(env,e2)) match {
         case (Str(s1), Str(s2)) =>
           Cst(if (s1 == s2) 1 else 0)
-        case (Code(s1),Code(s2)) =>
+        case SomeCode(s1,s2) =>
           reflectc(Equs(s1,s2))
       }
     case Fst(e1) =>
