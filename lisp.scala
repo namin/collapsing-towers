@@ -103,7 +103,7 @@ object Lisp {
     replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
 
   val eval_vc_poly_src = s"""(lambda _ c
-${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (refRead c) (maybe-lift 1))) (maybe-lift 0)) (env exp))")}
+${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite (maybe-lift c) (+ (refRead (maybe-lift c)) (maybe-lift 1))) (maybe-lift 0)) (env exp))")}
 )
 """
 
@@ -374,9 +374,21 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   def testMutInEval() = {
     println("// ------- test mutation in eval --------")
     val counter_cell = new Cell(Cst(0))
+
+    // -----------------------------------------------
+    // interpretation
     val r1 = run { evalms(List(fac_val,eval_val,counter_cell),
       App(App(App(App(eval_vc_exp,Var(2)),Var(0)),Sym("nil-env")),Lit(4))) }
     check(r1)("Cst(24)")
+    check(counter_cell.v)("Cst(13)")
+    counter_cell.v = Cst(0)
+
+    // generation + interpretation
+    val c1 = reifyc { evalms(List(fac_val,eval_val,counter_cell),App(App(App(evalc_vc_exp,Var(2)),Var(0)),Sym("nil-env"))) }
+    println(pretty(c1, Nil))
+    check(counter_cell.v)("Cst(0)")
+    val r2 = run { evalms(Nil,App(c1,Lit(4))) }
+    check(r2)("Cst(24)")
     check(counter_cell.v)("Cst(13)")
   }
 }

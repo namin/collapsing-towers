@@ -24,6 +24,7 @@ object Base {
   case class RefNew(e:Exp) extends Exp
   case class RefRead(a:Exp) extends Exp
   case class RefWrite(a:Exp,e:Exp) extends Exp
+  case class RefExt(c: Cell) extends Exp
 
   case class Lift(e:Exp) extends Exp
   case object Tic2 extends Exp
@@ -65,6 +66,7 @@ object Base {
     case RefWrite(a, e) => eval(env,a) match {
       case (c:Cell) => c.v = eval(env,e); c
     }
+    case RefExt(c) => c
   }
 
   var stFresh = 0
@@ -129,6 +131,8 @@ object Base {
       reflect(RefRead(anf(env,a)))
     case RefWrite(a, e) =>
       reflect(RefWrite(anf(env,a),anf(env,e)))
+    case RefExt(c) =>
+      reflect(RefExt(c))
   }
 
 
@@ -154,6 +158,7 @@ object Base {
           // TODO: line above corresponds directly to Scala/LMS. but our intention is to do the right thing for `this` anyways:
           reflect(Lam(reify{ val Code(r) = evalms(env2:+Code(fresh()):+Code(fresh()),e2); r }))
       }
+    case (c:Cell) => RefExt(c)
     case Code(e) => Lift(e)
       // Here is a choice: should lift be idempotent? 
       // In this case we would return e. 
@@ -185,6 +190,7 @@ object Base {
       case (c:Cell,v) => c.v = v; c
       case (Code(c),Code(c1)) => reflectc(RefWrite(c,c1))
     }
+    case RefExt(c) => c
 
     case Lift(e) => 
       Code(lift(evalms(env,e)))
