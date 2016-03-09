@@ -31,23 +31,24 @@ val eval_exp_anf = reify { anf(List(Sym("XX"),Sym("XX"), Sym("XX")), eval_exp) }
 val evalc_exp_anf = reify { anf(List(Sym("XX"),Sym("XX"), Sym("XX")),evalc_exp) }
 
 // Str(yes)
-evalms(List(matches_val, ab_val, ac_val),App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Var(1)))
+check(evalms(List(matches_val, ab_val, ac_val),App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Var(1))))("Str(yes)")
 // Str(no)
-evalms(List(matches_val, ab_val, ac_val),App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Snd(Var(1))))
+check(evalms(List(matches_val, ab_val, ac_val),App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Snd(Var(1)))))("Str(no)")
 // Str(no)
-evalms(List(matches_val, ab_val, ac_val),App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Var(2)))
+check(evalms(List(matches_val, ab_val, ac_val),App(App(App(App(eval_exp,Var(0)),Sym("nil-env")),Var(1)), Var(2))))("Str(no)")
 
 // interpretation
-run { evalms(List(ab_val,matches_val,eval_val), App(App(App(App(eval_exp,Var(1)),Sym("nil-env")),Var(0)),Var(0))) }
+check(run { evalms(List(ab_val,matches_val,eval_val), App(App(App(App(eval_exp,Var(1)),Sym("nil-env")),Var(0)),Var(0))) })("Str(yes)")
 
 // double interpretation
-run { evalms(List(ab_val,matches_val,eval_val), App(App(App(App(App(App(eval_exp,Var(2)),Sym("nil-env")), Var(1)), Sym("nil-env2")), Var(0)), Var(0))) }
+check(run { evalms(List(ab_val,matches_val,eval_val), App(App(App(App(App(App(eval_exp,Var(2)),Sym("nil-env")), Var(1)), Sym("nil-env2")), Var(0)), Var(0))) })("Str(yes)")
 
 // generation + interpretation
 val c1 = reifyc { evalms(List(ab_val,matches_val,eval_val),App(App(evalc_exp,Var(1)),Sym("nil-env"))) }
 println(pretty(c1, Nil))
 // Str(yes)
 val r1 = run { val m = evalms(Nil,c1); evalms(List(m, ab_val), App(App(Var(0), Var(1)), Var(1))) }
+check(r1)("Str(yes)")
 
 // generation + generation + interpretation
 val c2 = reifyc { evalms(List(ab_val,matchesc_val,eval_val),App(App(evalc_exp,Var(1)),Sym("nil-env"))) }
@@ -55,6 +56,8 @@ val d2 = reifyc { val m = evalms(Nil,c2); evalms(List(m, ab_val), App(Var(0), Va
 println(pretty(d2, Nil))
 val r2 = run { val m = evalms(Nil,d2); evalms(List(m, ab_val), App(Var(0), Var(1))) }
 val s2 = run { val m = evalms(Nil,d2); evalms(List(m, ac_val), App(Var(0), Var(1))) }
+check(r2)("Str(yes)")
+check(s2)("Str(no)")
 
 // interpretation for generation
 val c3 = run { evalms(List(ab_val,matchesc_val,eval_val),App(App(eval_exp,Var(1)),Sym("nil-env"))) }
@@ -76,9 +79,9 @@ val Success(matchesc_ab_val, _) = parseAll(exp, matchesc_ab_src)
 // Str(yes)
 val r5 = run { evalms(List(ab_val,matches_ab_val,eval_val),App(App(App(eval_exp,Var(1)),Sym("nil-env")), Var(0))) }
 
+check(r5)("Str(yes)")
+
 val d6 = reifyc { evalms(List(ab_val,matchesc_ab_val,eval_val),App(App(eval_exp,Var(1)),Sym("nil-env"))) }
 println(pretty(d6, Nil))
-
-
 
 }
