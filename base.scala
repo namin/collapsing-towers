@@ -329,6 +329,9 @@ object Base {
     case Let(a,b) => s"${indent}let x${env.length} = ${block(pretty(a,env))} in ${(pretty(b,env:+("x"+env.length)))}"
     case Lam(e) => s"${indent}fun f${env.length} x${env.length+1} ${block(pretty(e,env:+("f"+env.length):+("x"+(env.length+1))))}"
     case If(c,a,b) => s"${indent}if (${pretty(c,env)}) ${block(pretty(a,env))} ${indent}else ${block(pretty(b,env))}"
+    case RefNew(a) => s"refNew(${pretty(a,env)})"
+    case RefRead(a) => s"${pretty(a,env)}!"
+    case RefWrite(a,b) => s"(${pretty(a,env)} := ${pretty(b,env)})"
     case _ => e.toString
   }
 
