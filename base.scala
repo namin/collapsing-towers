@@ -27,6 +27,7 @@ object Base {
   case class RefExt(c: Cell) extends Exp
 
   case class Lift(e:Exp) extends Exp
+  case class LiftRef(e:Exp) extends Exp
   case object Tic2 extends Exp
 
 
@@ -113,6 +114,8 @@ object Base {
       reflect(Minus(anf(env,e1),anf(env,e2)))
     case Equs(e1,e2) =>
       reflect(Equs(anf(env,e1),anf(env,e2)))
+    case Pair(e1,e2) =>
+      reflect(Pair(anf(env,e1),anf(env,e2)))
     case IsNum(e) =>
       reflect(IsNum(anf(env,e)))
     case IsStr(e) =>
@@ -123,6 +126,8 @@ object Base {
       reflect(Snd(anf(env,e)))
     case Lift(e) =>
       reflect(Lift(anf(env,e)))
+    case LiftRef(e) =>
+      reflect(LiftRef(anf(env,e)))
     case Tic => 
       reflect(Tic)
     case RefNew(e) =>
@@ -158,13 +163,31 @@ object Base {
           // TODO: line above corresponds directly to Scala/LMS. but our intention is to do the right thing for `this` anyways:
           reflect(Lam(reify{ val Code(r) = evalms(env2:+Code(fresh()):+Code(fresh()),e2); r }))
       }
-    case (c:Cell) => RefExt(c)
     case Code(e) => Lift(e)
       // Here is a choice: should lift be idempotent? 
       // In this case we would return e. 
       // This seems to imply that we can have only 2 stages.
       // If we would like to support more, we need to return Lift(e)
+    case (c:Cell) => 
+      // Again choices here:
+      // RefExt(c)         -- (like staticData) this inserts a ref to the existing cell, but then how do we generate code to create new refs?
+      // RefNew(lift(c.v)) -- (like var_new) this generates a new ref everytime. should we memoize?
+      reflect(RefNew(lift(c.v)))
   }
+
+  // by-reference, identity preserving, cross-stage-persistence (like staticData in LMS)
+  def liftRef(v: Val): Exp = v match {
+    case Cst(n) => // number
+      Lit(n)
+    case Str(s) => // string
+      Sym(s)
+    case Code(e) => 
+      LiftRef(e)
+    case (c:Cell) => 
+      RefExt(c)
+    // TODO: support closures (and what else?)
+  }
+
 
   // multi-stage evaluation
   def evalms(env: Env, e: Exp): Val = e match {
@@ -194,6 +217,8 @@ object Base {
 
     case Lift(e) => 
       Code(lift(evalms(env,e)))
+    case LiftRef(e) => 
+      Code(liftRef(evalms(env,e)))
     case Tic2 => 
       Code(reflect(Tic))
 
@@ -240,6 +265,13 @@ object Base {
           Cst(if (s1 == s2) 1 else 0)
         case (Code(s1),Code(s2)) =>
           reflectc(Equs(s1,s2))
+      }
+    case Pair(e1,e2) =>
+      (evalms(env,e1), evalms(env,e2)) match {
+        case (Code(s1),Code(s2)) => // Note: this is brittle. we want to be able to have present-stage pairs of code values.
+          reflectc(Pair(s1,s2))
+        case (a1,a2) =>
+          Tup(a1,a2)
       }
     case Fst(e1) =>
       (evalms(env,e1)) match {
