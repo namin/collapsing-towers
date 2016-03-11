@@ -56,10 +56,13 @@ object Lisp {
     case Tup(Str("if"),Tup(c,Tup(a,Tup(b,N)))) => If(trans(c,env),trans(a,env),trans(b,env))
     case Tup(Str("isNum"),Tup(a,N)) => IsNum(trans(a,env))
     case Tup(Str("isStr"),Tup(a,N)) => IsStr(trans(a,env))
+    case Tup(Str("cons"),Tup(a,Tup(b,N))) => Pair(trans(a,env),trans(b,env))
     case Tup(Str("car"),Tup(a,N)) => Fst(trans(a,env))
     case Tup(Str("cdr"),Tup(a,N)) => Snd(trans(a,env))
     case Tup(Str("lift"),Tup(a,N)) => Lift(trans(a,env))
+    case Tup(Str("lift-ref"),Tup(a,N)) => LiftRef(trans(a,env))
     case Tup(Str("nolift"),Tup(a,N)) => trans(a,env)
+    case Tup(Str("nolift-ref"),Tup(a,N)) => trans(a,env)
     case Tup(Str("equs"),Tup(a,Tup(b,N))) => Equs(trans(a,env),trans(b,env))
     case Tup(Str("refNew"),Tup(a,N)) => RefNew(trans(a,env))
     case Tup(Str("refRead"),Tup(a,N)) => RefRead(trans(a,env))
@@ -85,17 +88,20 @@ object Lisp {
       (if (equs 'if     (car exp))      (if ((eval (cadr exp)) env) ((eval (caddr exp)) env) ((eval (cadddr exp)) env))
       (if (equs 'lambda (car exp))      (maybe-lift (lambda f x ((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) f (if (equs y (caddr exp)) x (env y)))))))
       (if (equs 'let    (car exp))      (let x ((eval (caddr exp)) env) ((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) x (env y)))))
-      (if (equs 'lift   (car exp))      (lift ((eval (cadr exp)) env))
-      (if (equs 'nolift (car exp))      (nolift ((eval (cadr exp)) env))
+      (if (equs 'lift       (car exp))      (lift       ((eval (cadr exp)) env))
+      (if (equs 'lift-ref   (car exp))      (lift-ref   ((eval (cadr exp)) env))
+      (if (equs 'nolift     (car exp))      (nolift     ((eval (cadr exp)) env))
+      (if (equs 'nolift-ref (car exp))      (nolift-ref ((eval (cadr exp)) env))
       (if (equs 'isNum  (car exp))      (isNum ((eval (cadr exp)) env))
       (if (equs 'isStr  (car exp))      (isStr ((eval (cadr exp)) env))
+      (if (equs 'cons   (car exp))      (cons ((eval (cadr exp)) env) ((eval (caddr exp)) env))
       (if (equs 'car    (car exp))      (car ((eval (cadr exp)) env))
       (if (equs 'cdr    (car exp))      (cdr ((eval (cadr exp)) env))
       (if (equs 'quote  (car exp))      (maybe-lift (cadr exp))
       (if (equs 'refNew (car exp))      (refNew ((eval (cadr exp)) env))
       (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
       (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
-      ((env (car exp)) ((eval (cadr exp)) env)))))))))))))))))))
+      ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))))))))
     (((eval (car exp)) env) ((eval (cadr exp)) env))
     )))))""".
     replace("(cadr exp)","(car (cdr exp))").
@@ -103,7 +109,7 @@ object Lisp {
     replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
 
   val eval_vc_poly_src = s"""(lambda _ c
-${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite (maybe-lift c) (+ (refRead (maybe-lift c)) (maybe-lift 1))) (maybe-lift 0)) (env exp))")}
+${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (refRead c) (maybe-lift 1))) (maybe-lift 0)) (env exp))")}
 )
 """
 
@@ -384,8 +390,23 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite (maybe-
     counter_cell.v = Cst(0)
 
     // generation + interpretation
-    val c1 = reifyc { evalms(List(fac_val,eval_val,counter_cell),App(App(App(evalc_vc_exp,Var(2)),Var(0)),Sym("nil-env"))) }
-    println(pretty(c1, Nil))
+    val c1 = reifyc { evalms(List(fac_val,eval_val,counter_cell),App(App(App(evalc_vc_exp,LiftRef(Var(2))),Var(0)),Sym("nil-env"))) }
+    val expected = """
+    |fun f0 x1 
+    |  let x2 = RefExt(Base$Cell@XX)! in 
+    |  let x3 = (x2 + 1) in 
+    |  let x4 = (RefExt(Base$Cell@XX) := x3) in 
+    |  if (x1) 
+    |    let x5 = RefExt(Base$Cell@XX)! in 
+    |    let x6 = (x5 + 1) in 
+    |    let x7 = (RefExt(Base$Cell@XX) := x6) in 
+    |    let x8 = RefExt(Base$Cell@XX)! in 
+    |    let x9 = (x8 + 1) in 
+    |    let x10 = (RefExt(Base$Cell@XX) := x9) in 
+    |    let x11 = (x1 - 1) in 
+    |    let x12 = (f0 x11) in (x1 * x12) 
+    |  else 1""".stripMargin
+    check(pretty(c1, Nil).replaceAll("@[0-9a-f]+","@XX"))(expected)
     check(counter_cell.v)("Cst(0)")
     val r2 = run { evalms(Nil,App(c1,Lit(4))) }
     check(r2)("Cst(24)")
