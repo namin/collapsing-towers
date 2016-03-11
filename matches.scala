@@ -4,11 +4,11 @@ import Base._
 import Lisp._
 import Lisp.parser._
 
-val matches_poly_src = """(let matches (lambda matches r (lambda _ s
-  (if (equs 'done (car r)) (maybe-lift 'yes)
+val matches_poly_src = """(let matches (lambda matches n (lambda _ s
+  (if (equs 'done (car n)) (maybe-lift 'yes)
     (if (equs (maybe-lift 'done) (car s)) (maybe-lift 'no)
-      (if (equs (maybe-lift (car r)) (car s)) ((matches (cdr r)) (cdr s)) (maybe-lift 'no))))))
-  (lambda _ r (maybe-lift (lambda _ s ((matches r) s)))))
+      (if (equs (maybe-lift (car n)) (car s)) ((matches (cdr n)) (cdr s)) (maybe-lift 'no))))))
+  (lambda _ n (maybe-lift (lambda _ s ((matches n) s)))))
 """
 
 val matches_src = matches_poly_src.replace("maybe-lift", "nolift")
@@ -223,5 +223,20 @@ check(r5)("Str(yes)")
 
 val d6 = reifyc { evalms(List(ab_val,matchesc_ab_val,eval_val),App(App(eval_exp,Var(1)),Sym("nil-env"))) }
 check(pretty(d6, Nil))(expected)
+
+// ----
+// "direct" generation with modified semantics (count variable accesses)
+val counter_cell = new Cell(Cst(0))
+val d5 = reifyc { evalms(List(ab_val,matchesc_val,counter_cell),App(App(App(App(evalt_vc_exp, LiftRef(Var(2))),Var(1)),Sym("nil-env")), Var(0))) }
+check(counter_cell.v)("Cst(0)")
+//check(pretty(d5, Nil))(expected) 
+val r6 = run { val m = evalms(Nil,d5); evalms(List(m, ab_val), App(Var(0), Var(1))) }
+check(counter_cell.v)("Cst(8)")
+counter_cell.v = Cst(0)
+val s6 = run { val m = evalms(Nil,d5); evalms(List(m, ac_val), App(Var(0), Var(1))) }
+check(counter_cell.v)("Cst(6)") // less accesses b/c early termination
+check(r6)("Str(yes)")
+check(s6)("Str(no)")
+
 }
 }
