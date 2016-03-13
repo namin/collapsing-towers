@@ -144,6 +144,19 @@ object Base {
   def reifyc(f: => Val) = reify { val Code(e) = f; e }
   def reflectc(s: Exp) = Code(reflect(s))
 
+  def reifyv(f: => Val) = run {
+    stBlock = Nil
+    val res = f
+    if (stBlock != Nil) {
+      // if we are generating code at all,
+      // the result must be code
+      val Code(last) = res
+      Code((stBlock foldRight last)(Let))
+    } else {
+      res
+    }
+  }
+
   // NBE-style 'reify' operator (semantics -> syntax)
   def lift(v: Val): Exp = v match {
     case Cst(n) => // number
