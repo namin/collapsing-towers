@@ -158,13 +158,18 @@ object Base {
   }
 
   // NBE-style 'reify' operator (semantics -> syntax)
+  // lifting is shallow, i.e. 
+  //   Rep[A]=>Rep[B]  ==> Rep[A=>B]
+  //   (Rep[A],Rep[B]) ==> Rep[(A,B)]
+  //   Cell[Rep[A]]    ==> Rep[Cell[A]]
   def lift(v: Val): Exp = v match {
     case Cst(n) => // number
       Lit(n)
     case Str(s) => // string
       Sym(s)
     case Tup(a,b) =>
-      Pair(lift(a),lift(b))
+      val (Code(u),Code(v)) = (a,b)
+      reflect(Pair(u,v))
     case Clo(env2,e2) => // function
       //println("??" + v)
       stFun collectFirst { case (n,`env2`,`e2`) => n } match {
@@ -176,7 +181,7 @@ object Base {
           // TODO: line above corresponds directly to Scala/LMS. but our intention is to do the right thing for `this` anyways:
           reflect(Lam(reify{ val Code(r) = evalms(env2:+Code(fresh()):+Code(fresh()),e2); r }))
       }
-    case Code(e) => Lift(e)
+    case Code(e) => reflect(Lift(e))
       // Here is a choice: should lift be idempotent? 
       // In this case we would return e. 
       // This seems to imply that we can have only 2 stages.
@@ -185,7 +190,8 @@ object Base {
       // Again choices here:
       // RefExt(c)         -- (like staticData) this inserts a ref to the existing cell, but then how do we generate code to create new refs?
       // RefNew(lift(c.v)) -- (like var_new) this generates a new ref everytime. should we memoize?
-      reflect(RefNew(lift(c.v)))
+      val Code(v) = c.v
+      reflect(RefNew(v))
   }
 
   // by-reference, identity preserving, cross-stage-persistence (like staticData in LMS)
@@ -214,10 +220,9 @@ object Base {
     case Tic => 
       Cst(tick())
 
-    case RefNew(e) => evalms(env,e) match {
-      case Code(c1) => reflectc(RefNew(c1))
-      case v => new Cell(v)
-    }
+    case RefNew(e) => 
+      // introduction form, needs explicit lifting
+      new Cell(evalms(env,e))
     case RefRead(a) => evalms(env,a) match {
       case (c:Cell) => c.v
       case Code(c1) => reflectc(RefRead(c1))
@@ -280,12 +285,8 @@ object Base {
           reflectc(Equs(s1,s2))
       }
     case Pair(e1,e2) =>
-      (evalms(env,e1), evalms(env,e2)) match {
-        case (Code(s1),Code(s2)) => // Note: this is brittle. we want to be able to have present-stage pairs of code values.
-          reflectc(Pair(s1,s2))
-        case (a1,a2) =>
-          Tup(a1,a2)
-      }
+      // introduction form, needs explicit lifting
+      Tup(evalms(env,e1),evalms(env,e2))
     case Fst(e1) =>
       (evalms(env,e1)) match {
         case (Tup(a,b)) => 
