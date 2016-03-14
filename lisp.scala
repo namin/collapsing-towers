@@ -5,6 +5,8 @@ object Lisp {
 
   // from github.com/namin/lms-black
   object parser extends JavaTokenParsers with PackratParsers {
+    override val whiteSpace = """(\s|(;[^\n]*))+""".r
+
     def S(x:String) = Str(x)
     def Str2(x:String) = ???
     def P(x:Val,y:Val) = Tup(x,y)
