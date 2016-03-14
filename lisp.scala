@@ -44,6 +44,7 @@ object Lisp {
 
   // ********************* convert exp encoded as val --> exp  *********************
 
+  var traceExec = false
   def trans(e: Val, env: List[String]): Exp = e match {
     case Cst(n) => Lit(n)
     case Str(s) => val i = env.lastIndexOf(s); assert(i>=0, s + " not in " + env); Var(i)
@@ -62,7 +63,7 @@ object Lisp {
     case Tup(Str("car"),Tup(a,N)) => Fst(trans(a,env))
     case Tup(Str("cdr"),Tup(a,N)) => Snd(trans(a,env))
     case Tup(Str("lift"),Tup(a,N)) => Lift(trans(a,env))
-    case Tup(Str("lift-ref"),Tup(a,N)) => LiftRef(trans(a,env))
+    case Tup(Str("lift-ref"),Tup(a,N)) => Special(benv => Code(Special(b2 => evalms(benv,trans(a,env))))) //LiftRef(trans(a,env))
     case Tup(Str("nolift"),Tup(a,N)) => trans(a,env)
     case Tup(Str("nolift-ref"),Tup(a,N)) => trans(a,env)
     case Tup(Str("equs"),Tup(a,Tup(b,N))) => Equs(trans(a,env),trans(b,env))
@@ -71,7 +72,8 @@ object Lisp {
     case Tup(Str("refWrite"),Tup(a,Tup(e,N))) => RefWrite(trans(a,env),trans(e,env))
     // special forms: eval / trans assume empty env for now
     case Tup(Str("exec"),Tup(a,N)) => 
-      Special(benv => evalms(Nil, reifyc(evalms(benv, trans(a,env)))))
+      def trace(x:Exp): Exp = { if (traceExec) println(">>> compile: " + pretty(x,Nil)); x }
+      Special(benv => evalms(Nil, trace(reifyc(evalms(benv, trans(a,env))))))
     case Tup(Str("trans-quote"),Tup(a,N)) => 
       Special(benv => Code(trans(evalms(benv, trans(a,env)), Nil)))
     // but EM needs a version that uses current env
