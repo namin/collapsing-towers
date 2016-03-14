@@ -69,6 +69,13 @@ object Lisp {
     case Tup(Str("refNew"),Tup(a,N)) => RefNew(trans(a,env))
     case Tup(Str("refRead"),Tup(a,N)) => RefRead(trans(a,env))
     case Tup(Str("refWrite"),Tup(a,Tup(e,N))) => RefWrite(trans(a,env),trans(e,env))
+    // special forms: eval / trans assume empty env for now
+    case Tup(Str("eval-base"),Tup(a,N)) => 
+      Special(benv => evalms(Nil, reifyc(evalms(benv, trans(a,env)))))
+    case Tup(Str("trans-base"),Tup(a,N)) => 
+      Special(benv => Code(trans(evalms(benv, trans(a,env)), Nil)))
+    case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
+    // generic app
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
   }
 
