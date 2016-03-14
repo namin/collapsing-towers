@@ -427,4 +427,56 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     check(r2)("Cst(24)")
     check(counter_cell.v)("Cst(13)")
   }
+
+
+  def testEvalSyntax() = {
+    println("// ------- test eval from lisp syntax --------")
+
+    def run(src: String) = {
+      val prog_src = s"""(let evalms (lambda _ src (eval-base (trans-base src))) $src)"""
+      val Success(prog_val, _) = parseAll(exp, prog_src)
+      val prog_exp = trans(prog_val,Nil)
+      val res = reifyv(evalms(Nil,prog_exp))
+      println(res)
+      res
+    }
+
+    // plain exec
+    run(s"""(let fac $fac_src (fac 4))""")
+
+    // quote + exec
+    run(s"""
+    (let fac_val (quote $fac_src)
+    (let fac     (evalms fac_val)
+    (fac 4)))""")
+
+    // quote + interpret
+    run(s"""
+    (let fac_val       (quote $fac_src)
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_poly_src exp) 'nil)))
+    (let eval          (eval_poly (lambda _ e e))
+    (let fac           (eval fac_val)
+    (fac 4)))))""")
+
+    // quote + compile
+    run(s"""
+    (let fac_val       (quote $fac_src)
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_poly_src exp) 'nil)))
+    (let evalc         (eval_poly (lambda _ e (lift e)))
+    (let fac           (eval-base (evalc fac_val)) ; evalc call must be in arg position (reify!)
+    (fac 4)))))""")
+
+    // quote + compile with interpreted compiler
+    run(s"""
+    (let fac_val       (quote $fac_src)
+    (let eval_poly_val (quote (lambda _ maybe-lift (lambda _ exp (($eval_poly_src exp) 'nil))))
+    (let eval_poly     (evalms eval_poly_val)
+    (let eval          (eval_poly (lambda _ e e))
+    (let eval_poly2    (eval eval_poly_val)
+    (let evalc2        (eval_poly2 (lambda _ e (lift e)))
+    (let fac           (eval-base (evalc2 fac_val))
+    (fac 4))))))))""")
+
+  }
+
 }
