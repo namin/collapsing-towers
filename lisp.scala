@@ -507,6 +507,111 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     (fac 4))))""")
 
 
+
+    println("----- test unstaging (LMS mock-up) -----")
+
+    // test case: call compilation again from compiled code
+
+    case class Rep[T](s: Exp)
+
+    def unit(x:Int): Rep[Int] = Rep(Lit(x))
+
+    implicit class IntOps(x: Rep[Int]) {
+      def *(y: Rep[Int]): Rep[Int] = Rep(reflect(Times(x.s,y.s)))
+    }
+    implicit class FunOps[A,B](x: Rep[A=>B]) {
+      def call(y: Rep[A]): Rep[B] = Rep(reflect(App(x.s,y.s)))
+    }
+
+
+    val cell = new Cell(null)
+
+    def compile[A,B](f: Rep[A] => Rep[B]): A => B = {
+      val res = reify(f(Rep[A](fresh)).s)
+      val code = Rep[A=>B](Lam(res))
+      println(">>> compiled >>> ")
+      println("  " + code.s)
+      (x => ???)
+    }
+
+    def staticData[A](s:String, x: A): Rep[A] = Rep(Special(benv => Str(s)))
+
+    def unstage[T,U](x: Rep[T])(f:T => Rep[U]): Rep[U] = {
+      val ff: Rep[T => Rep[Int] => Rep[U]] = staticData("handler",x => ignore => f(x))
+      val gg: Rep[Rep[Int] => Rep[U]] = ff.call(x)
+      val cc: Rep[(Rep[Int] => Rep[U]) => (Int=>U)] = staticData("compile",compile[Int,U] _)
+      val hh: Rep[Int => U] = cc.call(gg)
+      hh.call(unit(-1))
+    }
+
+    compile { x: Rep[Int] =>
+      unit(2) * x * unit(3)
+    }
+
+    compile { x: Rep[Int] =>
+      unit(2) * unstage(x) { x2 =>  unit(x2 * 3) }
+    }
+
+    // problem case: recompiled code refers to stuff in env
+    compile { x: Rep[Int] =>
+      unit(2) * unstage(x) { x2 =>  unit(x2) * x } 
+      // x is a variable that refers to code at generation time of original code
+    }
+
+
+    println("----- test unstaging / runtime re-compilation -----")
+    traceExec = true
+
+    // test 1
+    run(s"""
+    (let compile     (lambda _ x (exec (lift x)))
+    (let fun         (compile (lambda f x (* (lift 2) x)))
+    (fun 3)))""")
+/*
+    >>> compile: 
+    fun f0 x1 (2 * x1)
+    Cst(6)
+*/
+
+
+    // test 2
+    run(s"""
+    (let compile     (lambda _ x (exec (lift x)))
+    (let unstage     (lambda _ x (lambda _ f 
+      (let ff (lift-ref (lambda _ x2 (compile (lambda _ _ (f x2)))))
+      (let hh (ff x)
+      (hh (lift 'dummy))))))
+    (let fun         (compile (lambda f x-dynamic
+      (* (lift 2) ((unstage x-dynamic) (lambda _ x-static (lift (* x-static 3)))))))
+    (* (fun 2) (fun 3)))))""")
+/*
+    >>> compile: 
+    fun f0 x1 
+      let x2 = (Special(<function1>) x1) in 
+      let x3 = (x2 "dummy") in (2 * x3)
+    >>> compile: 
+    fun f0 x1 6
+    >>> compile: 
+    fun f0 x1 9
+    Cst(216)
+*/
+
+
+
+    // test 3 --- this fails with an exception (cannot refer to data in outer env)
+    /*run(s"""
+    (let compile     (lambda _ x (exec (lift x)))
+    (let static      (lambda _ x (lift-ref x))
+    (let unstage     (lambda _ x (lambda _ f 
+      (let ff (static (lambda _ x2 (compile (lambda _ _ (f x2)))))
+      (let hh (ff x)
+      (hh (lift 'dummy))))))
+    (let fun         (compile (lambda f x-dynamic 
+      (* (lift 2) ((unstage x-dynamic) (lambda _ x-static (* x-dynamic (lift 3)))))))
+    (* (fun 2) (fun 3))))))""")*/
+
+    traceExec = false
+
   }
 
 }
