@@ -140,6 +140,8 @@ object Base {
       reflect(RefWrite(anf(env,a),anf(env,e)))
     case RefExt(c) =>
       reflect(RefExt(c))
+    case Special(f) =>
+      reflect(Special(f))
   }
 
 

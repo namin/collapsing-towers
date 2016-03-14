@@ -46,7 +46,7 @@ object Lisp {
 
   def trans(e: Val, env: List[String]): Exp = e match {
     case Cst(n) => Lit(n)
-    case Str(s) => val i = env.lastIndexOf(s); assert(i>=0, s); Var(i)
+    case Str(s) => val i = env.lastIndexOf(s); assert(i>=0, s + " not in " + env); Var(i)
     case Tup(Str("quote"),Tup(Str(s),N)) => Sym(s)
     case Tup(Str("+"),Tup(a,Tup(b,N))) => Plus(trans(a,env),trans(b,env))
     case Tup(Str("-"),Tup(a,Tup(b,N))) => Minus(trans(a,env),trans(b,env))
@@ -74,6 +74,11 @@ object Lisp {
       Special(benv => evalms(Nil, reifyc(evalms(benv, trans(a,env)))))
     case Tup(Str("trans-quote"),Tup(a,N)) => 
       Special(benv => Code(trans(evalms(benv, trans(a,env)), Nil)))
+    // but EM needs a version that uses current env
+    case Tup(Str("exec/env"),Tup(a,N)) => 
+      Special(benv => evalms(benv, reifyc(evalms(benv, trans(a,env)))))
+    case Tup(Str("trans-quote/env"),Tup(a,N)) => 
+      Special(benv => Code(trans(evalms(benv, trans(a,env)), env)))
     case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
     // generic app
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
@@ -107,10 +112,11 @@ object Lisp {
       (if (equs 'car    (car exp))      (car ((eval (cadr exp)) env))
       (if (equs 'cdr    (car exp))      (cdr ((eval (cadr exp)) env))
       (if (equs 'quote  (car exp))      (maybe-lift (cadr exp))
+      (if (equs 'EM     (car exp))      'em-not-supported
       (if (equs 'refNew (car exp))      (maybe-lift (refNew ((eval (cadr exp)) env)))
       (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
       (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
-      ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))))))))
+      ((env (car exp)) ((eval (cadr exp)) env)))))))))))))))))))))))
     (((eval (car exp)) env) ((eval (cadr exp)) env))
     )))))""".
     replace("(cadr exp)","(car (cdr exp))").
@@ -121,6 +127,9 @@ object Lisp {
 ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (refRead c) (trace-lift 1))) (trace-lift 0)) (env exp))")}
 )
 """
+
+  // so far, we support only one level of EM
+  val eval_em_poly_src = eval_poly_src.replace("'em-not-supported","(exec/env (trans-quote/env (car (cdr exp))))")
 
   val eval_src = eval_poly_src.replace("maybe-lift","nolift") // plain interpreter
   val evalc_src = eval_poly_src.replace("maybe-lift","lift")  // generating extension = compiler
@@ -442,12 +451,14 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     }
 
     // plain exec
-    run(s"""(let fac $fac_src (fac 4))""")
+    run(s"""
+    (let fac $fac_src 
+    (fac 4))""")
 
     // quote + exec
     run(s"""
-    (let fac_val (quote $fac_src)
-    (let fac     (exec-quote fac_val)
+    (let fac_val   (quote $fac_src)
+    (let fac       (exec-quote fac_val)
     (fac 4)))""")
 
     // quote + interpret
@@ -476,6 +487,23 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     (let evalc2        (eval_poly2 (lambda _ e (lift e)))
     (let fac           (exec (evalc2 fac_val))
     (fac 4))))))))""")
+
+
+    // test EM interpreted
+    run(s"""
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_em_poly_src exp) 'nil)))
+    (let eval          (eval_poly (lambda _ e e))
+    (let fac           (eval (quote (lambda f x (EM (* 6 (env 'x))))))
+    (fac 4))))""")
+
+    // test EM compiled
+    run(s"""
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_em_poly_src exp) 'nil)))
+    (let evalc         (eval_poly (lambda _ e (lift e)))
+    (let fac           (exec (evalc (quote (lambda f x (EM (* (lift 6) (env 'x)))))))
+    ; fac compiles to (lambda f x (6 * x))
+    (fac 4))))""")
+
 
   }
 
