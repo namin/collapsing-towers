@@ -30,6 +30,8 @@ object Base {
   case class LiftRef(e:Exp) extends Exp
   case object Tic2 extends Exp
 
+  case class Special(f:Env => Val) extends Exp
+
 
   type Env = List[Val]
 
@@ -315,6 +317,9 @@ object Base {
         case v => 
           Cst(if (v.isInstanceOf[Str]) 1 else 0)
       }
+
+    // special forms: custom eval, ...
+    case Special(f) => f(env)
   }
 
 
