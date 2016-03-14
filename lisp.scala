@@ -70,9 +70,9 @@ object Lisp {
     case Tup(Str("refRead"),Tup(a,N)) => RefRead(trans(a,env))
     case Tup(Str("refWrite"),Tup(a,Tup(e,N))) => RefWrite(trans(a,env),trans(e,env))
     // special forms: eval / trans assume empty env for now
-    case Tup(Str("eval-base"),Tup(a,N)) => 
+    case Tup(Str("exec"),Tup(a,N)) => 
       Special(benv => evalms(Nil, reifyc(evalms(benv, trans(a,env)))))
-    case Tup(Str("trans-base"),Tup(a,N)) => 
+    case Tup(Str("trans-quote"),Tup(a,N)) => 
       Special(benv => Code(trans(evalms(benv, trans(a,env)), Nil)))
     case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
     // generic app
@@ -433,7 +433,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     println("// ------- test eval from lisp syntax --------")
 
     def run(src: String) = {
-      val prog_src = s"""(let evalms (lambda _ src (eval-base (trans-base src))) $src)"""
+      val prog_src = s"""(let exec-quote (lambda _ src (exec (trans-quote src))) $src)"""
       val Success(prog_val, _) = parseAll(exp, prog_src)
       val prog_exp = trans(prog_val,Nil)
       val res = reifyv(evalms(Nil,prog_exp))
@@ -447,7 +447,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     // quote + exec
     run(s"""
     (let fac_val (quote $fac_src)
-    (let fac     (evalms fac_val)
+    (let fac     (exec-quote fac_val)
     (fac 4)))""")
 
     // quote + interpret
@@ -463,18 +463,18 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     (let fac_val       (quote $fac_src)
     (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_poly_src exp) 'nil)))
     (let evalc         (eval_poly (lambda _ e (lift e)))
-    (let fac           (eval-base (evalc fac_val)) ; evalc call must be in arg position (reify!)
+    (let fac           (exec (evalc fac_val)) ; evalc call must be in arg position (reify!)
     (fac 4)))))""")
 
     // quote + compile with interpreted compiler
     run(s"""
     (let fac_val       (quote $fac_src)
     (let eval_poly_val (quote (lambda _ maybe-lift (lambda _ exp (($eval_poly_src exp) 'nil))))
-    (let eval_poly     (evalms eval_poly_val)
+    (let eval_poly     (exec-quote eval_poly_val)
     (let eval          (eval_poly (lambda _ e e))
     (let eval_poly2    (eval eval_poly_val)
     (let evalc2        (eval_poly2 (lambda _ e (lift e)))
-    (let fac           (eval-base (evalc2 fac_val))
+    (let fac           (exec (evalc2 fac_val))
     (fac 4))))))))""")
 
   }
