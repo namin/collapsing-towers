@@ -11,6 +11,7 @@ object TestMain {
     testEval()
     testMutEval()
     testMutInEval()
+    testEvalSyntax()
 
     testMatches()
     testMatchesBis()
