@@ -63,10 +63,11 @@ object Lisp {
     case Tup(Str("car"),Tup(a,N)) => Fst(trans(a,env))
     case Tup(Str("cdr"),Tup(a,N)) => Snd(trans(a,env))
     case Tup(Str("lift"),Tup(a,N)) => Lift(trans(a,env))
-    case Tup(Str("lift-ref"),Tup(a,N)) => Special(benv => Code(Special(b2 => evalms(benv,trans(a,env))))) //LiftRef(trans(a,env))
     case Tup(Str("nolift"),Tup(a,N)) => trans(a,env)
-    case Tup(Str("nolift-ref"),Tup(a,N)) => trans(a,env)
     case Tup(Str("equs"),Tup(a,Tup(b,N))) => Equs(trans(a,env),trans(b,env))
+    // mutable refs
+    case Tup(Str("lift-ref"),Tup(a,N)) => Special(benv => Code(Special(b2 => evalms(benv,trans(a,env))))) //LiftRef(trans(a,env))
+    case Tup(Str("nolift-ref"),Tup(a,N)) => trans(a,env)
     case Tup(Str("refNew"),Tup(a,N)) => RefNew(trans(a,env))
     case Tup(Str("refRead"),Tup(a,N)) => RefRead(trans(a,env))
     case Tup(Str("refWrite"),Tup(a,Tup(e,N))) => RefWrite(trans(a,env),trans(e,env))
@@ -77,14 +78,17 @@ object Lisp {
     case Tup(Str("trans-quote"),Tup(a,N)) => 
       Special(benv => Code(trans(evalms(benv, trans(a,env)), Nil)))
     // but EM needs a version that uses current env
-    case Tup(Str("exec/env"),Tup(a,N)) => 
-      Special(benv => evalms(benv, reifyc(evalms(benv, trans(a,env)))))
+    case Tup(Str("exec/env"),Tup(b,Tup(a,N))) => 
+      //Special(benv => evalms(benv, reifyc(evalms(benv, trans(a,env)))))
+      Eval(trans(b,env),trans(a,env))
     case Tup(Str("trans-quote/env"),Tup(a,N)) => 
       Special(benv => Code(trans(evalms(benv, trans(a,env)), env)))
     case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
-    // generic app
+    // default case: generic app
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
   }
+
+  // TODO: meta-circular implementation of exec, exec/env, trans-quote, trans-quote/env
 
 
   // ********************* source programs  *********************
@@ -115,10 +119,11 @@ object Lisp {
       (if (equs 'cdr    (car exp))      (cdr ((eval (cadr exp)) env))
       (if (equs 'quote  (car exp))      (maybe-lift (cadr exp))
       (if (equs 'EM     (car exp))      'em-not-supported
+      (if (equs 'exec/env (car exp))    (equs ((eval (cadr exp)) env) ((eval (caddr exp)) env))
       (if (equs 'refNew (car exp))      (maybe-lift (refNew ((eval (cadr exp)) env)))
       (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
       (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
-      ((env (car exp)) ((eval (cadr exp)) env)))))))))))))))))))))))
+      ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))))))))))
     (((eval (car exp)) env) ((eval (cadr exp)) env))
     )))))""".
     replace("(cadr exp)","(car (cdr exp))").
@@ -130,8 +135,21 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 )
 """
 
+  /*
+   How to do JIT: 
+    - essence: self-modifying code
+    - each function has state, can go from interp -> compiled
+
+   Question:
+    - our granularity is lambda, but e.g. jvm granularity is method/code block
+    - we would like to compile a piece of code in the program, instead of 
+      recompile same code for each fresh runtime instance of a lambda
+
+
+  */
+
   // so far, we support only one level of EM
-  val eval_em_poly_src = eval_poly_src.replace("'em-not-supported","(exec/env (trans-quote/env (car (cdr exp))))")
+  val eval_em_poly_src = eval_poly_src.replace("'em-not-supported","(exec/env 0 (trans-quote/env (car (cdr exp))))")
 
   val eval_src = eval_poly_src.replace("maybe-lift","nolift") // plain interpreter
   val evalc_src = eval_poly_src.replace("maybe-lift","lift")  // generating extension = compiler
@@ -460,8 +478,16 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     // quote + exec
     run(s"""
     (let fac_val   (quote $fac_src)
-    (let fac       (exec-quote fac_val)
+    (let fac       (exec-quote fac_val) ; evalms fac_val in current env, then evalms result in empty env
     (fac 4)))""")
+
+    // exec (without quoting)
+    run(s"""
+    (let exec-quote/env (lambda _ src (exec/env 0 (trans-quote/env src)))
+    (let fac_val   $fac_src
+    (let fac       (exec/env 0 (trans-quote/env (quote (lambda _ n (fac_val n))))) ; evalms fac_val in current env, then evalms result in empty env
+    (fac 4))))""")
+
 
     // quote + interpret
     run(s"""
@@ -477,7 +503,17 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_poly_src exp) 'nil)))
     (let evalc         (eval_poly (lambda _ e (lift e)))
     (let fac           (exec (evalc fac_val)) ; evalc call must be in arg position (reify!)
-    (fac 4)))))""")
+    fac))))""")
+
+    // quote + compile^2
+    run(s"""
+    (let fac_val       (quote $fac_src)
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_poly_src exp) 'nil)))
+    (let evalc         (eval_poly (lambda _ e (lift (lift e))))
+    (let fac           (evalc fac_val) ; evalc call must be in arg position (reify!)
+    fac ))))""") // result is code
+
+
 
     // quote + compile with interpreted compiler
     run(s"""
@@ -506,7 +542,21 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     ; fac compiles to (lambda f x (6 * x))
     (fac 4))))""")
 
+  }
 
+
+  // EXPERIMENTAL
+  def testUnstaging() = {
+    println("// ------- test eval from lisp syntax --------")
+
+    def run(src: String) = {
+      val prog_src = s"""(let exec-quote (lambda _ src (exec (trans-quote src))) $src)"""
+      val Success(prog_val, _) = parseAll(exp, prog_src)
+      val prog_exp = trans(prog_val,Nil)
+      val res = reifyv(evalms(Nil,prog_exp))
+      println(res)
+      res
+    }
 
     println("----- test unstaging (LMS mock-up) -----")
 
@@ -596,19 +646,90 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     Cst(216)
 */
 
+    println("---XX---")
+
+    // test 3
+    run(s"""
+    (let compile     (lambda _ x (exec (lift x)))
+    (let compile2    (lambda _ x ((lift-ref compile) (lift x)))
+    (let fun         (compile (lambda _ xd
+      (* (lift 2) ((compile2 (lambda _ _ (lift (* xd (lift 3))))) (lift 'dummy)))))
+    (fun 2))))""")
+
+
+
+
+/*
+    >>> compile: 
+    fun f0 x1 
+      let x2 = (Special(<function1>) x1) in 
+      let x3 = (x2 "dummy") in (2 * x3)
+    >>> compile: 
+    fun f0 x1 6
+    >>> compile: 
+    fun f0 x1 9
+    Cst(216)
+*/
 
 
     // test 3 --- this fails with an exception (cannot refer to data in outer env)
-    /*run(s"""
+    run(s"""
     (let compile     (lambda _ x (exec (lift x)))
     (let static      (lambda _ x (lift-ref x))
-    (let unstage     (lambda _ x (lambda _ f 
-      (let ff (static (lambda _ x2 (compile (lambda _ _ (f x2)))))
-      (let hh (ff x)
-      (hh (lift 'dummy))))))
-    (let fun         (compile (lambda f x-dynamic 
-      (* (lift 2) ((unstage x-dynamic) (lambda _ x-static (* x-dynamic (lift 3)))))))
-    (* (fun 2) (fun 3))))))""")*/
+    (lift static )))""")
+/*
+    (let fun         (compile (lambda _ x
+      ;((lift-ref compile) (lift (lambda _ y (+ (lift x) y))))))
+      ((lift compile) (lift 7))))
+    (fun 2))))""")
+*/
+
+  val feval_poly_src = """
+  (lambda eval exp (lambda _ env
+    (if (isNum               exp)       (maybe-lift exp)
+    (if (isStr               exp)       (env exp)
+    (if (isStr          (car exp))      
+      (if (equs '+      (car exp))      (+  ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+      (if (equs '-      (car exp))      (-  ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+      (if (equs '*      (car exp))      (*  ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+      (if (equs 'equs   (car exp))      (equs ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+      (if (equs 'if     (car exp))      (if ((eval (cadr exp)) env) ((eval (caddr exp)) env) ((eval (cadddr exp)) env))
+      (if (equs 'lambda (car exp))      (maybe-lift (lambda f x ((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) f (if (equs y (caddr exp)) x (env y)))))))
+      (if (equs 'let    (car exp))      (let x ((eval (caddr exp)) env) ((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) x (env y)))))
+      (if (equs 'lift       (car exp))      (lift       ((eval (cadr exp)) env))
+      (if (equs 'lift-ref   (car exp))      (lift-ref   ((eval (cadr exp)) env))
+      (if (equs 'nolift     (car exp))      (nolift     ((eval (cadr exp)) env))
+      (if (equs 'nolift-ref (car exp))      (nolift-ref ((eval (cadr exp)) env))
+      (if (equs 'isNum  (car exp))      (isNum ((eval (cadr exp)) env))
+      (if (equs 'isStr  (car exp))      (isStr ((eval (cadr exp)) env))
+      (if (equs 'cons   (car exp))      (maybe-lift (cons ((eval (cadr exp)) env) ((eval (caddr exp)) env)))
+      (if (equs 'car    (car exp))      (car ((eval (cadr exp)) env))
+      (if (equs 'cdr    (car exp))      (cdr ((eval (cadr exp)) env))
+      (if (equs 'quote  (car exp))      (maybe-lift (cadr exp))
+      (if (equs 'EM     (car exp))      'em-not-supported
+
+      unstage x handler ===>  evalc
+
+      (if (equs 'refNew (car exp))      (maybe-lift (refNew ((eval (cadr exp)) env)))
+      (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
+      (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+      ((env (car exp)) ((eval (cadr exp)) env)))))))))))))))))))))))
+    (((eval (car exp)) env) ((eval (cadr exp)) env))
+    )))))""".
+    replace("(cadr exp)","(car (cdr exp))").
+    replace("(caddr exp)","(car (cdr (cdr exp)))").
+    replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
+
+
+
+
+
+
+
+
+
+
+
 
     traceExec = false
 

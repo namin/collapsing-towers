@@ -9,12 +9,14 @@ object TestMain {
 
     testFac1()
     testEval()
-    testMutEval()
-    testMutInEval()
+    //testMutEval()
+    //testMutInEval()
     testEvalSyntax()
 
     testMatches()
     testMatchesBis()
+
+    //testUnstaging() // experimental
 
     println("done")
   }

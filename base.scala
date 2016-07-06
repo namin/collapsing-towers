@@ -30,6 +30,8 @@ object Base {
   case class LiftRef(e:Exp) extends Exp
   case object Tic2 extends Exp
 
+  case class Eval(b:Exp,e:Exp) extends Exp
+
   case class Special(f:Env => Val) extends Exp
 
 
@@ -130,6 +132,8 @@ object Base {
       reflect(Lift(anf(env,e)))
     case LiftRef(e) =>
       reflect(LiftRef(anf(env,e)))
+    case Eval(b,e) =>
+      reflect(Eval(anf(env,b),reify(anf(env,e))))
     case Tic => 
       reflect(Tic)
     case RefNew(e) =>
@@ -241,6 +245,15 @@ object Base {
       Code(lift(evalms(env,e)))
     case LiftRef(e) => 
       Code(liftRef(evalms(env,e)))
+    case Eval(b,e) =>
+      evalms(env,b) match {
+        case Code(b1) =>
+          reflectc(Eval(b1, reifyc(evalms(env,e))))
+        case _ =>
+          val code = reifyc(evalms(env, e))
+          reifyv(evalms(env, code))
+      }
+
     case Tic2 => 
       Code(reflect(Tic))
 
@@ -335,7 +348,7 @@ object Base {
   def pretty(e: Exp, env: List[String]): String = e match {
     case Lit(n) => n.toString
     case Sym(n) => "\""+n+"\""
-    case Var(x) => env(x)
+    case Var(x) => try env(x) catch { case _ => "?" }
     case IsNum(a) => s"isNum(${pretty(a,env)})"
     case IsStr(a) => s"isStr(${pretty(a,env)})"
     case Lift(a) => s"lift(${pretty(a,env)})"

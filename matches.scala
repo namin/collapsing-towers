@@ -238,5 +238,8 @@ check(counter_cell.v)("Cst(6)") // less accesses b/c early termination
 check(r6)("Str(yes)")
 check(s6)("Str(no)")
 
+
+// TODO: generate a specialized regexp compiler that will generate code that counts var accesses!
+
 }
 }
