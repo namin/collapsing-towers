@@ -7,7 +7,7 @@
   (v (lit number) (lam x e) (cons v v) (code e))
   (b plus minus times)
   (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (b E e) (b v E) (fix E e) (lift E) (run E e) (reflect E))
-  (R hole (reify R) (lift (lam x R)) (if (code e) R e) (if (code e) v R) (run (code e) R))
+  (R hole (reify (in-hole E R)) (reify R) (lift (lam x R)) (if (code e) R e) (if (code e) v R) (run (code e) R))
   (M (in-hole R (reify E)) E)
   (x (variable-except lit lam cons let app if plus minus times fix lift run reflect reify pair code)))
 
