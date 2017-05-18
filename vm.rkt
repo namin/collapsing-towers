@@ -63,10 +63,6 @@
         (side-condition (no-reflect? (term v))))
    ))
 
-;; Tiark suggests something like:
-;; (--> (in-hole R (reify (in-hole E (reflect (code e)))))
-;;      (in-hole R (let x_new (code e) (reify (in-hole E x_new))))        "reify-reflect"
-
 (define-metafunction vm
   subst : x any any -> any
   [(subst x_1 any_1 (lam x_1 any_2)) (lam x_1 any_2)]
