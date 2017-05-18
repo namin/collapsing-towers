@@ -6,7 +6,7 @@
      (reflect e) (reify e))
   (v (lit number) (lam x e) (cons v v) (code e))
   (b plus minus times)
-  (E hole (cons E e) (cons v E) (let x E g) (if E e e) (b E e) (b v E) (fix E e) (lift E) (run E e) (reflect E))
+  (E hole (cons E e) (cons v E) (let x E g) (app E e) (app v E) (if E e e) (b E e) (b v E) (fix E e) (lift E) (run E e) (reflect E))
   (R hole (reify R) (lift (lam x R)) (if (code e) R g) (if (code e) v R) (run (code e) R))
   (M (reify E) E)
   (x (variable-except lit lam cons let app if plus minus times fix lift run reflect reify pair code)))
@@ -68,7 +68,7 @@
   [(subst x_1 any_1 (lam x_1 any_2)) (lam x_1 any_2)]
   [(subst x_1 any_1 (lam x_2 any_2))
    (lam x_new (subst x_1 any_1 (subst-var x_2 x_new any_2)))
-   (where x_new ,(variable-not-in (term (x_1 any_1 any_2)) (term (x_2))))]
+   (where x_new ,(variable-not-in (term (x_1 any_1 any_2)) (term x_2)))]
   [(subst x_1 any_1 x_1) any_1]
   [(subst x_1 any_1 x_2) x_2]
   [(subst x_1 any_1 (any_2 ...))
@@ -79,7 +79,7 @@
   subst-var : x any any -> any
   [(subst-var x_1 any_1 x_1) any_1]
   [(subst-var x_1 any_1 (any_2 ...))
-   ((subst-var (x_1 any_1 any_2) ...))]
+   ((subst-var x_1 any_1 any_2) ...)]
   [(subst-var x_1 any_1 any_2) any_2])
 
 (define acc-trace
@@ -107,3 +107,26 @@
 (pp-each (acc-trace (term (reify (if (lit 0) (lift (plus (lit 3) (lit 1))) (plus (lift (lit 1)) (lift (lit 2))))))))
 (pp-each (acc-trace (term (reify (plus (lift (lit 0)) (plus (lift (lit 1)) (lift (plus (lit 2) (lit 3)))))))))
 (pp-each (acc-trace (term (reify (plus (plus (lift (lit 0)) (lift (lit 1))) (plus (lift (lit 2)) (lift (lit 3))))))))
+
+
+(pp-each (acc-trace (term (app (app
+  (lam fun
+       (app
+        (lam F
+             (app F F))
+        (lam F
+             (app fun (lam x (app (app F F) x))))))
+  (lam fac
+       (lam n
+            (if n
+                (times n (app fac (minus n (lit 1))))
+                (lit 1)))))
+  (lit 6)))))
+
+(pp-each (acc-trace (term (app (fix
+  (lam fac
+       (lam n
+            (if n
+                (times n (app fac (minus n (lit 1))))
+                (lit 1)))))
+  (lit 6)))))
