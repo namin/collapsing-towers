@@ -105,3 +105,5 @@
 (pp-each (acc-trace (term (reify (lift (lam x x))))))
 (pp-each (acc-trace (term (reify (lift (if (lit 0) (lit 1) (plus (lit 1) (lit 2))))))))
 (pp-each (acc-trace (term (reify (if (lit 0) (lift (plus (lit 3) (lit 1))) (plus (lift (lit 1)) (lift (lit 2))))))))
+(pp-each (acc-trace (term (reify (plus (lift (lit 0)) (plus (lift (lit 1)) (lift (plus (lit 2) (lit 3)))))))))
+(pp-each (acc-trace (term (reify (plus (plus (lift (lit 0)) (lift (lit 1))) (plus (lift (lit 2)) (lift (lit 3))))))))
