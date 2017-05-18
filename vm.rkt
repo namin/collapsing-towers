@@ -6,9 +6,9 @@
      (reflect e) (reify e))
   (v (lit number) (lam x e) (cons v v) (code e))
   (b plus minus times)
-  (E hole (cons E e) (cons v E) (let x E g) (app E e) (app v E) (if E e e) (b E e) (b v E) (fix E e) (lift E) (run E e) (reflect E))
-  (R hole (reify R) (lift (lam x R)) (if (code e) R g) (if (code e) v R) (run (code e) R))
-  (M (reify E) E)
+  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (b E e) (b v E) (fix E e) (lift E) (run E e) (reflect E))
+  (R hole (reify R) (lift (lam x R)) (if (code e) R e) (if (code e) v R) (run (code e) R))
+  (M (in-hole R (reify E)) E)
   (x (variable-except lit lam cons let app if plus minus times fix lift run reflect reify pair code)))
 
 (define not-code? (lambda (x) (not ((redex-match vm (code e)) x))))
@@ -56,8 +56,8 @@
    (--> (in-hole M (run e_1 (code e_2)))
         (in-hole M (reify e_2))                                           "runc"
         (side-condition (not-code? (term e_1))))
-   (--> (in-hole R (reify (in-hole M (reflect (code e)))))
-        (in-hole R (let x_new (code e) (reify (in-hole M x_new))))        "reify-reflect"
+   (--> (in-hole R (reify (in-hole E (reflect (code e)))))
+        (in-hole R (let x_new (code e) (reify (in-hole E x_new))))        "reify-reflect"
         (where x_new ,(variable-not-in (term (R E e)) (term x))))
    (--> (in-hole R (reify v)) (in-hole R v)                               "reify-id"
         (side-condition (no-reflect? (term v))))
@@ -130,3 +130,5 @@
                 (times n (app fac (minus n (lit 1))))
                 (lit 1)))))
   (lit 6)))))
+
+(pp-each (acc-trace (term (reify (lift (lam x (lift (plus (lit 1) (lit 2)))))))))
