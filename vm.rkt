@@ -12,6 +12,7 @@
 
 (define not-code? (lambda (x) (not ((redex-match vm (code e)) x))))
 (define no-reflect? (lambda (x) (not ((redex-match vm (in-hole E (reflect any))) x))))
+(define no-reify? (lambda (x) (not ((redex-match vm (in-hole R (reify any))) x))))
 
 (define red
   (reduction-relation
@@ -30,7 +31,7 @@
    (--> (in-hole E (fix (lam x e))) (in-hole E (subst x (fix (lam x e)) e)) "fix")
    (--> (in-hole E (cons v_1 v_2))  (in-hole E (pair v_1 v_2))            "cons")
    (--> (in-hole E (if (code e_0) (code e_1) (code e_2)))
-        (in-hole E (reflect (if (code e_0) e_1 e_2)))                     "ifccc")
+        (in-hole E (reflect (code (if (code e_0) e_1 e_2))))              "ifccc")
    (--> (in-hole E (if (code e_0) e_1 e_2))
         (in-hole E (if (code e_0) (reify e_1) (reify e_2)))               "ifc"
         (side-condition (and (not-code? (term e_1)) (not-code? (term e_2)))))
@@ -47,7 +48,7 @@
         (in-hole E (reflect (code (lam x e))))                            "lift-lamc")
    (--> (in-hole E (lift (lam x e)))
         (in-hole E (lift (lam x (reify (subst x (code x) e)))))           "lift-lam"
-        (side-condition (not-code? (term e))))
+        (side-condition (and (not-code? (term e)) (no-reify? (term e)))))
    (--> (in-hole E (run v e)) (in-hole E (run v (reify e)))               "run")
    (--> (in-hole E (run (code e_1) (code e_2)))
         (in-hole E (reflect (code (run e_1 e_2))))                        "runcc")
@@ -89,7 +90,7 @@
               (helper (car r) (cons (car r) a))
               (if (= 0 c)
                   (reverse a)
-                  (reverse (cons r a)))))))
+                  (reverse (cons (cons c r) a)))))))
     (helper e (cons e '()))))
 
 (define pp-each
@@ -98,6 +99,6 @@
 
 (pp-each (acc-trace (term (reify (reflect (code (plus (lit 1) (lit 2))))))))
 (pp-each (acc-trace (term (reify (lift (plus (lit 1) (lit 2)))))))
-(pp-each (acc-trace (term (app (lam x x) (lit 2)))))
+(pp-each (acc-trace (term (reify (app (lam x x) (lit 2))))))
 (pp-each (acc-trace (term (reify (lift (app (lam x x) (lit 2)))))))
-(pp-each (acc-trace (term (lift (lam x x)))))
+(pp-each (acc-trace (term (reify (lift (lam x x))))))
