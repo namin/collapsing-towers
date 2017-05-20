@@ -6,10 +6,10 @@
      (reflect e) (lamc x e) (letc x e e))
   (v (lit number) (lam x e) (cons v v) (code e))
   (b plus minus times)
-  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (b E e) (b v E) (fix E e) (lift E) (run E e) (reflect E))
+  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (b E e) (b v E) (lift E) (run E e) (reflect E))
   (R hole (lift (lamc x R)) (if (code e) R e) (if (code e) v R) (run (code e) R) (letc x e R))
   (M hole
-     (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (b M e) (b v M) (fix M e) (lift M) (run M e) (reflect M)
+     (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (b M e) (b v M) (lift M) (run M e) (reflect M)
      (lift (lamc x M)) (if (code e) M e) (if (code e) v M) (run (code e) M) (letc x e M))
   (x (variable-except lit lam cons let app if plus minus times fix lift run reflect letc code)))
 
