@@ -36,7 +36,7 @@
         (in-hole M (lit ,(* (term number_1) (term number_2))))             "times")
    (--> (in-hole M (fix (lam x e))) (in-hole M (subst x (fix (lam x e)) e)) "fix")
    (--> (in-hole M (if (code e_0) (code e_1) (code e_2)))
-        (in-hole M (reflect (code (if (code e_0) e_1 e_2))))              "ifccc")
+        (in-hole M (reflect (code (if e_0 e_1 e_2))))                     "ifccc")
    (--> (in-hole M (b_0 (code e_1) (code e_2)))
         (in-hole M (reflect (code (b_0 e_1 e_2))))                        "bc")
    (--> (in-hole M (app (code e_1) (code e_2)))
@@ -148,3 +148,8 @@
 (pp-each (acc-trace (term (lift (lam x (plus (plus (lift (lit 1)) (lift (lit 2))) (lift (lit 3))))))))
 
 (pp-each (acc-trace (term (app (lift (lam x (plus (plus (lift (lit 1)) (lift (lit 2))) (lift (lit 3))))) (if (lift (lit 0)) (lift (lit 1)) (lift (lit 2)))))))
+
+(pp-each (acc-trace (term (lift (lam fac (lift (lam n
+            (if n
+                (times n (app fac (minus n (lift (lit 1)))))
+                (lift (lit 1))))))))))
