@@ -48,6 +48,10 @@
         (in-hole M (lift (lamc x (subst x (code x) e))))                  "lift-lam")
    (--> (in-hole M (run (code e_1) (code e_2)))
         (in-hole M (reflect (code (run e_1 e_2))))                        "runcc")
+   (--> (in-hole M (run v_1 (code e_2)))
+        (in-hole M (app (lam x_new e_2) v_1))                             "runnc"
+        (side-condition (not-code? (term v_1)))
+        (where x_new ,(variable-not-in (term (M v_1 e_2)) (term x))))
    (--> (in-hole R (in-hole E (reflect (code e))))
         (in-hole R (letc x_new e (in-hole E (code x_new))))               "reify-reflect"
         (where x_new ,(variable-not-in (term (R E e)) (term x))))
@@ -130,3 +134,7 @@
 (pp-each (acc-trace (term (app (lift (lam x (lift (plus (lit 1) (lit 2))))) (lift (lit 2))))))
 
 (pp-each (acc-trace (term (plus (lift (if (lit 0) (lit 1) (lit 2))) (if (lift (lit 0)) (lift (lit 1)) (lift (lit 2)))))))
+
+(pp-each (acc-trace (term (run (code (lit 1)) (code (plus (lit 1) (lit 2)))))))
+
+(pp-each (acc-trace (term (run (lit 1) (code (plus (lit 1) (lit 2)))))))
