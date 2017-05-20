@@ -138,3 +138,5 @@
 (pp-each (acc-trace (term (run (code (lit 1)) (code (plus (lit 1) (lit 2)))))))
 
 (pp-each (acc-trace (term (run (lit 1) (code (plus (lit 1) (lit 2)))))))
+
+(pp-each (acc-trace (term (plus (app (lift (lam x x)) (lift (lit 1))) (lift (lit 2))))))
