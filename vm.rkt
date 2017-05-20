@@ -11,7 +11,6 @@
   (M hole
      (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (b M e) (b v M) (fix M e) (lift M) (run M e) (reflect M)
      (lift (lamc x M)) (if (code e) M e) (if (code e) v M) (run (code e) M) (letc x e M))
-  (P R)
   (x (variable-except lit lam cons let app if plus minus times fix lift run reflect letc code)))
 
 (define not-code? (lambda (x) (not ((redex-match vm (code e)) x))))
@@ -49,11 +48,11 @@
         (in-hole M (lift (lamc x (subst x (code x) e))))                  "lift-lam")
    (--> (in-hole M (run (code e_1) (code e_2)))
         (in-hole M (reflect (code (run e_1 e_2))))                        "runcc")
-   (--> (in-hole P (in-hole E (reflect (code e))))
-        (in-hole P (letc x_new e (in-hole E (code x_new))))               "reify-reflect"
+   (--> (in-hole R (in-hole E (reflect (code e))))
+        (in-hole R (letc x_new e (in-hole E (code x_new))))               "reify-reflect"
         (where x_new ,(variable-not-in (term (R E e)) (term x))))
-   (--> (in-hole P (letc x_1 e_1 (code e_2)))
-        (in-hole P (code (let x_1 e_1 e_2)))                              "letc")
+   (--> (in-hole R (letc x_1 e_1 (code e_2)))
+        (in-hole R (code (let x_1 e_1 e_2)))                              "letc")
    ))
 
 (define-metafunction vm
