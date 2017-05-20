@@ -7,10 +7,14 @@
   (v (lit number) (lam x e) (cons v v) (code e))
   (b plus minus times)
   (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (b E e) (b v E) (lift E) (run E e) (reflect E))
-  (R hole (lift (lamc x R)) (if (code e) R e) (if (code e) v R) (run (code e) R) (letc x e R))
   (M hole
      (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (b M e) (b v M) (lift M) (run M e) (reflect M)
      (lift (lamc x M)) (if (code e) M e) (if (code e) v M) (run (code e) M) (letc x e M))
+  (R (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (b R e) (b v R) (lift R) (run R e) (reflect R)
+     (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
+  (P hole
+     (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (b R e) (b v R) (lift R) (run R e) (reflect R)
+     (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
   (x (variable-except lit lam cons let app if plus minus times fix lift run reflect letc code)))
 
 (define not-code? (lambda (x) (not ((redex-match vm (code e)) x))))
@@ -52,11 +56,11 @@
         (in-hole M (app (lam x_new e_2) v_1))                             "runnc"
         (side-condition (not-code? (term v_1)))
         (where x_new ,(variable-not-in (term (M v_1 e_2)) (term x))))
-   (--> (in-hole R (in-hole E (reflect (code e))))
-        (in-hole R (letc x_new e (in-hole E (code x_new))))               "reify-reflect"
+   (--> (in-hole P (in-hole E (reflect (code e))))
+        (in-hole P (letc x_new e (in-hole E (code x_new))))               "reify-reflect"
         (where x_new ,(variable-not-in (term (R E e)) (term x))))
-   (--> (in-hole R (letc x_1 e_1 (code e_2)))
-        (in-hole R (code (let x_1 e_1 e_2)))                              "letc")
+   (--> (in-hole M (letc x_1 e_1 (code e_2)))
+        (in-hole M (code (let x_1 e_1 e_2)))                              "letc")
    ))
 
 (define-metafunction vm
@@ -140,3 +144,7 @@
 (pp-each (acc-trace (term (run (lit 1) (code (plus (lit 1) (lit 2)))))))
 
 (pp-each (acc-trace (term (plus (app (lift (lam x x)) (lift (lit 1))) (lift (lit 2))))))
+
+(pp-each (acc-trace (term (lift (lam x (plus (plus (lift (lit 1)) (lift (lit 2))) (lift (lit 3))))))))
+
+(pp-each (acc-trace (term (app (lift (lam x (plus (plus (lift (lit 1)) (lift (lit 2))) (lift (lit 3))))) (if (lift (lit 0)) (lift (lit 1)) (lift (lit 2)))))))
