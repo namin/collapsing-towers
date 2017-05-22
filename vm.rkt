@@ -6,14 +6,14 @@
      (reflect e) (lamc x e) (letc x e e))
   (v (lit number) (lam x e) (cons v v) (code e))
   (b plus minus times)
-  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (b E e) (b v E) (lift E) (run E e) (reflect E))
+  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (b E e) (b v E) (fix E) (lift E) (run E e) (reflect E))
   (M hole
-     (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (b M e) (b v M) (lift M) (run M e) (reflect M)
+     (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (b M e) (b v M) (fix M) (lift M) (run M e) (reflect M)
      (lift (lamc x M)) (if (code e) M e) (if (code e) v M) (run (code e) M) (letc x e M))
-  (R (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (b R e) (b v R) (lift R) (run R e) (reflect R)
+  (R (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
      (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
   (P hole
-     (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (b R e) (b v R) (lift R) (run R e) (reflect R)
+     (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
      (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
   (x (variable-except lit lam cons let app if plus minus times fix lift run reflect letc code)))
 
@@ -41,6 +41,8 @@
         (in-hole M (reflect (code (b_0 e_1 e_2))))                        "bc")
    (--> (in-hole M (app (code e_1) (code e_2)))
         (in-hole M (reflect (code (app e_1 e_2))))                        "appc")
+   (--> (in-hole M (fix (code e)))
+        (in-hole M (reflect (code (fix e))))                              "fixc")
    (--> (in-hole M (lift (lit number_1)))
         (in-hole M (code (lit number_1)))                                 "lift-lit")
    (--> (in-hole M (lift (cons (code e_1) (code e_2))))
@@ -153,3 +155,8 @@
             (if n
                 (times n (app fac (minus n (lift (lit 1)))))
                 (lift (lit 1))))))))))
+
+(pp-each (acc-trace (term (fix (lift (lam fac (lift (lam n
+            (if n
+                (times n (app fac (minus n (lift (lit 1)))))
+                (lift (lit 1)))))))))))
