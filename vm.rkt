@@ -2,18 +2,19 @@
 (require redex)
 
 (define-language vm
-  (e x (lit number) (lam x e) (cons e e) (code e) (let x e e) (app e e) (if e e e) (b e e) (fix e) (lift e) (run e e)
+  (e x (lit number) (str string) (lam x e) (cons e e) (code e) (let x e e) (app e e) (if e e e) (a e) (b e e) (fix e) (lift e) (run e e)
      (reflect e) (lamc x e) (letc x e e))
-  (v (lit number) (lam x e) (cons v v) (code e))
-  (b plus minus times)
-  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (b E e) (b v E) (fix E) (lift E) (run E e) (reflect E))
+  (v (lit number) (str string) (lam x e) (cons v v) (code e))
+  (a car cdr isLit isStr isCons)
+  (b plus minus times eq)
+  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (a E) (b E e) (b v E) (fix E) (lift E) (run E e) (reflect E))
   (M hole
-     (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (b M e) (b v M) (fix M) (lift M) (run M e) (reflect M)
+     (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (a M) (b M e) (b v M) (fix M) (lift M) (run M e) (reflect M)
      (lift (lamc x M)) (if (code e) M e) (if (code e) v M) (run (code e) M) (letc x e M))
-  (R (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
+  (R (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (a R) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
      (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
   (P hole
-     (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
+     (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (a R) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
      (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
   (x (variable-except lit lam cons let app if plus minus times fix lift run reflect letc code)))
 
@@ -28,15 +29,31 @@
    (--> (in-hole M (if (lit 0) e_1 e_2))        (in-hole M e_2)           "if0")
    (--> (in-hole M (if (lit number_0) e_1 e_2)) (in-hole M e_1)           "ifn"
         (side-condition (not (= 0 (term number_0)))))
+   (--> (in-hole M (car (cons v_1 v_2))) (in-hole M v_1)                  "car")
+   (--> (in-hole M (cdr (cons v_1 v_2))) (in-hole M v_2)                  "cdr")
+   (--> (in-hole M (isLit (lit number))) (in-hole M (lit 1))              "isLit1")
+   (--> (in-hole M (isLit v)) (in-hole M (lit 0))                         "isLit0"
+        (side-condition (and (not-code? (term v)) (not ((redex-match vm (lit number)) (term v))))))
+   (--> (in-hole M (isStr (str string))) (in-hole M (lit 1))              "isStr1")
+   (--> (in-hole M (isStr v)) (in-hole M (lit 0))                         "isStr0"
+        (side-condition (and (not-code? (term v)) (not ((redex-match vm (str string)) (term v))))))
+   (--> (in-hole M (isCons (cons v_1 v_2))) (in-hole M (lit 1))           "isCons1")
+   (--> (in-hole M (isCons v)) (in-hole M (lit 0))                         "isCons0"
+        (side-condition (and (not-code? (term v)) (not ((redex-match vm (cons e_1 e_2)) (term v))))))
    (--> (in-hole M (plus (lit number_1) (lit number_2)))
         (in-hole M (lit ,(+ (term number_1) (term number_2))))             "plus")
    (--> (in-hole M (minus (lit number_1) (lit number_2)))
         (in-hole M (lit ,(- (term number_1) (term number_2))))             "minus")
    (--> (in-hole M (times (lit number_1) (lit number_2)))
         (in-hole M (lit ,(* (term number_1) (term number_2))))             "times")
+   (--> (in-hole M (eq v_1 v_2))
+        (in-hole M (lit ,(if (equal? (term v_1) (term v_2)) 1 0)))         "eq"
+        (side-condition (and (not-code? (term v_1)) (not-code? (term v_2)))))
    (--> (in-hole M (fix (lam x e))) (in-hole M (subst x (fix (lam x e)) e)) "fix")
    (--> (in-hole M (if (code e_0) (code e_1) (code e_2)))
         (in-hole M (reflect (code (if e_0 e_1 e_2))))                     "ifccc")
+   (--> (in-hole M (a_0 (code e_1)))
+        (in-hole M (reflect (code (a_0 e_1))))                            "ac")
    (--> (in-hole M (b_0 (code e_1) (code e_2)))
         (in-hole M (reflect (code (b_0 e_1 e_2))))                        "bc")
    (--> (in-hole M (app (code e_1) (code e_2)))
@@ -108,70 +125,9 @@
   (lambda (l)
     (if (null? l) (display "done\n") (begin (display (car l)) (display "\n") (pp-each (cdr l))))))
 
-(pp-each (acc-trace (term (reflect (code (plus (lit 1) (lit 2)))))))
-(pp-each (acc-trace (term (lift (plus (lit 1) (lit 2))))))
-(pp-each (acc-trace (term (app (lam x x) (lit 2)))))
-(pp-each (acc-trace (term (lift (app (lam x x) (lit 2))))))
-(pp-each (acc-trace (term (lift (lam x x)))))
-(pp-each (acc-trace (term (lift (if (lit 0) (lit 1) (plus (lit 1) (lit 2)))))))
-(pp-each (acc-trace (term (if (lit 0) (lift (plus (lit 3) (lit 1))) (plus (lift (lit 1)) (lift (lit 2)))))))
-(pp-each (acc-trace (term (plus (lift (lit 0)) (plus (lift (lit 1)) (lift (plus (lit 2) (lit 3))))))))
-(pp-each (acc-trace (term (plus (plus (lift (lit 0)) (lift (lit 1))) (plus (lift (lit 2)) (lift (lit 3)))))))
-
-
-(pp-each (acc-trace (term (app (app
-  (lam fun
-       (app
-        (lam F
-             (app F F))
-        (lam F
-             (app fun (lam x (app (app F F) x))))))
-  (lam fac
-       (lam n
-            (if n
-                (times n (app fac (minus n (lit 1))))
-                (lit 1)))))
-  (lit 6)))))
-
-(pp-each (acc-trace (term (app (fix
-  (lam fac
-       (lam n
-            (if n
-                (times n (app fac (minus n (lit 1))))
-                (lit 1)))))
-  (lit 6)))))
-
-(pp-each (acc-trace (term (lift (lam x (lift (plus (lit 1) (lit 2))))))))
-
-(pp-each (acc-trace (term (lift (lam x (plus x (lift (plus (lit 1) (lit 2)))))))))
-
-(pp-each (acc-trace (term (app (lift (lam x (lift (plus (lit 1) (lit 2))))) (lift (lit 2))))))
-
-(pp-each (acc-trace (term (plus (lift (if (lit 0) (lit 1) (lit 2))) (if (lift (lit 0)) (lift (lit 1)) (lift (lit 2)))))))
-
-(pp-each (acc-trace (term (run (code (lit 1)) (code (plus (lit 1) (lit 2)))))))
-
-(pp-each (acc-trace (term (run (lit 1) (code (plus (lit 1) (lit 2)))))))
-
-(pp-each (acc-trace (term (plus (app (lift (lam x x)) (lift (lit 1))) (lift (lit 2))))))
-
-(pp-each (acc-trace (term (lift (lam x (plus (plus (lift (lit 1)) (lift (lit 2))) (lift (lit 3))))))))
-
-(pp-each (acc-trace (term (app (lift (lam x (plus (plus (lift (lit 1)) (lift (lit 2))) (lift (lit 3))))) (if (lift (lit 0)) (lift (lit 1)) (lift (lit 2)))))))
-
-(pp-each (acc-trace (term (lift (lam fac (lift (lam n
-            (if n
-                (times n (app fac (minus n (lift (lit 1)))))
-                (lift (lit 1))))))))))
-
-(pp-each (acc-trace (term (fix (lift (lam fac (lift (lam n
-            (if n
-                (times n (app fac (minus n (lift (lit 1)))))
-                (lift (lit 1)))))))))))
-
-(pp-each (acc-trace (term (app
- (let x4 (lam fac (let x3 (lam n1 (let x2 (if n1 (let x (minus n1 (lit 1)) (let x1 (app fac x) (let x (times n1 x1) x))) (lit 1)) x2)) x3)) (let x (fix x4) x))
- (lit 6)))))
+(define pp-fl
+  (lambda (l)
+    (pp-each (list (car l) (last l)))))
 
 (define fac
   `(fix (app l (lam fac (app l (lam n
@@ -179,5 +135,37 @@
        (times n (app fac (minus n (app l (lit 1)))))
        (app l (lit 1)))))))))
 
-(pp-each (acc-trace (term (app (let l (lam x x) ,fac) (lit 6)))))
-(pp-each (acc-trace (second (last (acc-trace (term (app (let l (lam x (lift x)) ,fac) (lift (lit 6)))))))))
+;(pp-each (acc-trace (term (app (let l (lam x x) ,fac) (lit 3)))))
+;(pp-each (acc-trace (second (last (acc-trace (term (app (let l (lam x (lift x)) ,fac) (lift (lit 3)))))))))
+
+(define ev
+  `(fix (lam ev (lam exp (lam env
+   (if (isLit exp) (app l exp)
+   (if (isStr exp) (app env exp)
+   (if (eq (str "plus")  (car exp)) (plus  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+   (if (eq (str "minus") (car exp)) (minus (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+   (if (eq (str "times") (car exp)) (times (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+   (if (eq (str "eq")    (car exp)) (eq    (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+   (if (eq (str "if")    (car exp)) (if (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) env))
+   (if (eq (str "lam")   (car exp)) (app l (lam x (app (app ev (car (cdr (cdr exp)))) (lam y (if (eq y (car (cdr exp))) x (app env y))))))
+   (if (eq (str "let")   (car exp)) (let x (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) (lam y (if (eq y (car (cdr exp))) x (app env y)))))
+   (if (eq (str "lift")  (car exp)) (lift  (app (app ev (car (cdr exp))) env))
+   (if (eq (str "isLit") (car exp)) (isLit (app (app ev (car (cdr exp))) env))
+   (if (eq (str "isStr") (car exp)) (isStr (app (app ev (car (cdr exp))) env))
+   (if (eq (str "cons")  (car exp)) (cons  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+   (if (eq (str "car")   (car exp)) (car (app (app ev (car (cdr exp))) env))
+   (if (eq (str "cdr")   (car exp)) (cdr (app (app ev (car (cdr exp))) env))
+   (if (eq (str "app")   (car exp)) (app (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+   (str "error")
+   )))))))))))))))))))))
+
+;(pp-each (acc-trace (term (app (app (let l (lam x x) ,ev) (lit 3)) (lam y y)))))
+;(pp-each (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) (lit 3)) (lam y y)))))
+
+(define quotify
+  (lambda (e)
+    (if (or (not (pair? e)) (eq? (car e) 'lit) (eq? (car e) 'str) (eq? (car e) 'code))
+        (if (symbol? e) (list 'str (symbol->string e)) (if (null? e) (list 'str "nil") e))
+        (list 'cons (quotify (car e)) (quotify (cdr e))))))
+
+;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify '(times (plus (lit 1) (lit 2)) (lit 4)))) (lam y y)))))
