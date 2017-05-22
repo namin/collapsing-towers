@@ -184,4 +184,4 @@
 ;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app ,(facl (lambda (x) x)) (lit 3)))) (lam y y)))))
 ;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app (let l (lam x x) ,(facl (lambda (x) x))) (lit 3)))) (lam y y)))))
 ;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app (let l (lam x x) ,fac) (lit 3)))) (lam y y)))))
-(pp-fl (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) ,(quotify (facl (lambda (x) x)))) (lam y y)))))
+;(pp-fl (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) ,(quotify (facl (lambda (x) x)))) (lam y y)))))
