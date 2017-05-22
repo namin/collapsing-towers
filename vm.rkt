@@ -71,6 +71,14 @@
   [(subst x_1 any_1 (lam x_2 any_2))
    (lam x_new (subst x_1 any_1 (subst-var x_2 x_new any_2)))
    (where x_new ,(variable-not-in (term (x_1 any_1 any_2)) (term x_2)))]
+  [(subst x_1 any_1 (let x_1 any_x any_2)) (let x_1 (subst x_1 any_1 any_x) any_2)]
+  [(subst x_1 any_1 (let x_2 any_x any_2))
+   (let x_new (subst x_1 any_1 any_x) (subst x_1 any_1 (subst-var x_2 x_new any_2)))
+   (where x_new ,(variable-not-in (term (x_1 any_x any_1 any_2)) (term x_2)))]
+  [(subst x_1 any_1 (letc x_1 any_x any_2)) (letc x_1 (subst x_1 any_1 any_x) any_2)]
+  [(subst x_1 any_1 (letc x_2 any_x any_2))
+   (letc x_new (subst x_1 any_1 any_x) (subst x_1 any_1 (subst-var x_2 x_new any_2)))
+   (where x_new ,(variable-not-in (term (x_1 any_x any_1 any_2)) (term x_2)))]
   [(subst x_1 any_1 x_1) any_1]
   [(subst x_1 any_1 x_2) x_2]
   [(subst x_1 any_1 (any_2 ...))
@@ -160,3 +168,7 @@
             (if n
                 (times n (app fac (minus n (lift (lit 1)))))
                 (lift (lit 1)))))))))))
+
+(pp-each (acc-trace (term (app
+ (let x4 (lam fac (let x3 (lam n1 (let x2 (if n1 (let x (minus n1 (lit 1)) (let x1 (app fac x) (let x (times n1 x1) x))) (lit 1)) x2)) x3)) (let x (fix x4) x))
+ (lit 6)))))
