@@ -91,11 +91,11 @@
   [(subst x_1 any_1 (let x_1 any_x any_2)) (let x_1 (subst x_1 any_1 any_x) any_2)]
   [(subst x_1 any_1 (let x_2 any_x any_2))
    (let x_new (subst x_1 any_1 any_x) (subst x_1 any_1 (subst-var x_2 x_new any_2)))
-   (where x_new ,(variable-not-in (term (x_1 any_x any_1 any_2)) (term x_2)))]
+   (where x_new ,(variable-not-in (term (x_1 any_1 any_2)) (term x_2)))]
   [(subst x_1 any_1 (letc x_1 any_x any_2)) (letc x_1 (subst x_1 any_1 any_x) any_2)]
   [(subst x_1 any_1 (letc x_2 any_x any_2))
    (letc x_new (subst x_1 any_1 any_x) (subst x_1 any_1 (subst-var x_2 x_new any_2)))
-   (where x_new ,(variable-not-in (term (x_1 any_x any_1 any_2)) (term x_2)))]
+   (where x_new ,(variable-not-in (term (x_1 any_1 any_2)) (term x_2)))]
   [(subst x_1 any_1 x_1) any_1]
   [(subst x_1 any_1 x_2) x_2]
   [(subst x_1 any_1 (any_2 ...))
@@ -148,7 +148,8 @@
    (if (eq (str "eq")    (car exp)) (eq    (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
    (if (eq (str "if")    (car exp)) (if (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) env))
    (if (eq (str "lam")   (car exp)) (app l (lam x (app (app ev (car (cdr (cdr exp)))) (lam y (if (eq y (car (cdr exp))) x (app env y))))))
-   (if (eq (str "let")   (car exp)) (let x (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) (lam y (if (eq y (car (cdr exp))) x (app env y)))))
+   (if (eq (str "let")   (car exp)) (let x (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) (lam y (if (eq y (car (cdr exp))) x (app env y)))))
+   (if (eq (str "fix")   (car exp)) (fix (app (app ev (car (cdr exp))) env))
    (if (eq (str "lift")  (car exp)) (lift  (app (app ev (car (cdr exp))) env))
    (if (eq (str "isLit") (car exp)) (isLit (app (app ev (car (cdr exp))) env))
    (if (eq (str "isStr") (car exp)) (isStr (app (app ev (car (cdr exp))) env))
@@ -157,7 +158,7 @@
    (if (eq (str "cdr")   (car exp)) (cdr (app (app ev (car (cdr exp))) env))
    (if (eq (str "app")   (car exp)) (app (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
    (str "error")
-   )))))))))))))))))))))
+   ))))))))))))))))))))))
 
 ;(pp-each (acc-trace (term (app (app (let l (lam x x) ,ev) (lit 3)) (lam y y)))))
 ;(pp-each (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) (lit 3)) (lam y y)))))
@@ -168,8 +169,19 @@
         (if (symbol? e) (list 'str (symbol->string e)) (if (null? e) (list 'str "nil") e))
         (list 'cons (quotify (car e)) (quotify (cdr e))))))
 
+(define facl (lambda (l)
+  `(fix ,(l `(lam fac ,(l `(lam n
+   (if n
+       (times n (app fac (minus n ,(l `(lit 1)))))
+       ,(l `(lit 1))))))))))
+
 ;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify '(times (plus (lit 1) (lit 2)) (lit 4)))) (lam y y)))))
 ;(pp-fl (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) ,(quotify '(times (plus (lit 1) (lit 2)) (lit 4)))) (lam y y)))))
 ;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify '(app (lam x (times x x)) (lit 3)))) (lam y y)))))
 ;(pp-fl (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) ,(quotify '(lam x (times x x)))) (lam y y)))))
-(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app (let l (lam x x) ,fac) (lit 3)))) (lam y y)))))
+;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(if (lit 1) (lit 1) (lit 0)))) (lam y y)))))
+;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app (lam x (if x (lit 1) (lit 0))) (lit 3)))) (lam y y)))))
+;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app ,(facl (lambda (x) x)) (lit 3)))) (lam y y)))))
+;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app (let l (lam x x) ,(facl (lambda (x) x))) (lit 3)))) (lam y y)))))
+;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app (let l (lam x x) ,fac) (lit 3)))) (lam y y)))))
+(pp-fl (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) ,(quotify (facl (lambda (x) x)))) (lam y y)))))
