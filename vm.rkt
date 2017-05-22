@@ -169,3 +169,4 @@
         (list 'cons (quotify (car e)) (quotify (cdr e))))))
 
 ;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify '(times (plus (lit 1) (lit 2)) (lit 4)))) (lam y y)))))
+;(pp-fl (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) ,(quotify '(times (plus (lit 1) (lit 2)) (lit 4)))) (lam y y)))))
