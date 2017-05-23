@@ -62,6 +62,8 @@
         (in-hole M (reflect (code (fix e))))                              "fixc")
    (--> (in-hole M (lift (lit number_1)))
         (in-hole M (code (lit number_1)))                                 "lift-lit")
+   (--> (in-hole M (lift (str string_1)))
+        (in-hole M (code (str string_1)))                                 "lift-str")
    (--> (in-hole M (lift (cons (code e_1) (code e_2))))
         (in-hole M (reflect (code (cons e_1 e_2))))                       "lift-cons")
    (--> (in-hole M (lift (code e))) (in-hole M (reflect (code (lift e)))) "lift-code")
@@ -142,6 +144,7 @@
   `(fix (lam ev (lam exp (lam env
    (if (isLit exp) ,(l `exp)
    (if (isStr exp) (app env exp)
+   (if (eq (str "quote") (car exp)) ,(l `(car (cdr exp)))
    (if (eq (str "plus")  (car exp)) (plus  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
    (if (eq (str "minus") (car exp)) (minus (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
    (if (eq (str "times") (car exp)) (times (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
@@ -158,7 +161,7 @@
    (if (eq (str "cdr")   (car exp)) (cdr (app (app ev (car (cdr exp))) env))
    (if (eq (str "app")   (car exp)) (app (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
    (str "error")
-   )))))))))))))))))))))))
+   ))))))))))))))))))))))))
 
 
 (define ev (evl (lambda (x) `(app l ,x))))
@@ -169,7 +172,8 @@
 (define quotify
   (lambda (e)
     (if (or (not (pair? e)) (eq? (car e) 'lit) (eq? (car e) 'str) (eq? (car e) 'code))
-        (if (symbol? e) (list 'str (symbol->string e)) (if (null? e) (list 'str "nil") e))
+        (if (symbol? e) (list 'str (symbol->string e)) (if (null? e) (list 'str "nil")
+        (if (eq? (car e) 'str) (list 'cons '(str "quote") (list 'cons e (list 'str "nil"))) e)))
         (list 'cons (quotify (car e)) (quotify (cdr e))))))
 
 (define facl (lambda (l)
@@ -202,5 +206,4 @@
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) `(lift ,x))) (app (lam x x) (lit 3))) (lam y y)))) (lam y y)))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) `(lift ,x))) (lam x x)) (lam y y)))) (lam y y)))))
 
-;; BUG
-;(define ds (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify '(lam exp (eq (str "foo") (car exp))))) (lam y y)))))
+;(last (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify '(lam exp (eq (str "foo") (car exp))))) (lam y y)))))
