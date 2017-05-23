@@ -153,7 +153,7 @@
    (if (eq (str "lift")  (car exp)) (lift  (app (app ev (car (cdr exp))) env))
    (if (eq (str "isLit") (car exp)) (isLit (app (app ev (car (cdr exp))) env))
    (if (eq (str "isStr") (car exp)) (isStr (app (app ev (car (cdr exp))) env))
-   (if (eq (str "cons")  (car exp)) (cons  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+   (if (eq (str "cons")  (car exp)) ,(l `(cons  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env)))
    (if (eq (str "car")   (car exp)) (car (app (app ev (car (cdr exp))) env))
    (if (eq (str "cdr")   (car exp)) (cdr (app (app ev (car (cdr exp))) env))
    (if (eq (str "app")   (car exp)) (app (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
@@ -190,12 +190,17 @@
 ;(length (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify `(app (let l (lam x x) ,fac) (lit 3)))) (lam y y)))))
 ;(length (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (let l (lam x x) ,fac) (lit 3)))) (lam y y)))))
 ;(pp-fl (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) ,(quotify (facl (lambda (x) x)))) (lam y y)))))
-(pp-fl (acc-trace `(app
-                    ,(second (last (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (facl (lambda (x) x)))) (lam y y))))))
-                    (lit 3))))
-
+;(pp-fl (acc-trace `(app
+;                    ,(second (last (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (facl (lambda (x) x)))) (lam y y))))))
+;                    (lit 3))))
+;(pp-fl (acc-trace `(app (app
+;,(second (last (acc-trace `(app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (evl (lambda (x) x)))) (lam y y)))))
+;,(quotify '(app (lam x (plus x x)) (lit 3)))) (lam y y))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) x)) (lit 3)) (lam y y)))) (lam y y)))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) `(lift ,x))) (lit 3)) (lam y y)))) (lam y y)))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) x)) (app (lam x x) (lit 3))) (lam y y)))) (lam y y)))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) `(lift ,x))) (app (lam x x) (lit 3))) (lam y y)))) (lam y y)))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) `(lift ,x))) (lam x x)) (lam y y)))) (lam y y)))))
+
+;; BUG
+;(define ds (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify '(lam exp (eq (str "foo") (car exp))))) (lam y y)))))
