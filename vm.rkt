@@ -16,7 +16,7 @@
   (P hole
      (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (a R) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
      (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
-  (x (variable-except lit lam cons let app if plus minus times fix lift run reflect letc code)))
+  (x (variable-except lit str lam cons let app if car cdr isLit isStr isCons plus minus times eq fix lift run reflect letc code)))
 
 (define not-code? (lambda (x) (not ((redex-match vm (code e)) x))))
 (define no-reflect? (lambda (x) (not ((redex-match vm (in-hole E (reflect any))) x))))
