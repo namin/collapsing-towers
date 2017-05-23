@@ -111,6 +111,21 @@
    ((subst-var x_1 any_1 any_2) ...)]
   [(subst-var x_1 any_1 any_2) any_2])
 
+(define iter-eval
+  (lambda (e)
+    (define (helper e i)
+      (if (= (modulo i 50) 0)
+          (display ".")
+          'ok)
+      (let ((r (apply-reduction-relation red e)))
+        (let ((c (length r)))
+          (if (= 1 c)
+              (helper (car r) (+ i 1))
+              (if (= 0 c)
+                  e
+                  r)))))
+    (helper e 0)))
+
 (define acc-trace
   (lambda (e)
     (define (helper e a)
@@ -198,7 +213,11 @@
 ;                    ,(second (last (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (facl (lambda (x) x)))) (lam y y))))))
 ;                    (lit 3))))
 ;(pp-fl (acc-trace `(app (app
-;,(second (last (acc-trace `(app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (evl (lambda (x) x)))) (lam y y)))))
+;,(second
+(define o
+  (iter-eval `(app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (evl (lambda (x) x)))) (lam y y)))
+)
+;)
 ;,(quotify '(app (lam x (plus x x)) (lit 3)))) (lam y y))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) x)) (lit 3)) (lam y y)))) (lam y y)))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) `(lift ,x))) (lit 3)) (lam y y)))) (lam y y)))))
