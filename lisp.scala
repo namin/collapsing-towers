@@ -428,6 +428,9 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     val Success(d_val, _) = parseAll(exp, d_src)
     val r1 = run { evalms(List(Tup(d_val,Tup(eval_vc_val, N)),d_val),App(App(App(eval_exp,Var(0)),Sym("nil-env")),Lit(0))) }
     check(r1)("Cst(2)")
+
+    //TOOD:How???
+    //val c1 = reifyc{ evalms(List(Tup(d_val,Tup(eval_vc_val, N)),d_val),App(App(evalc_exp,Var(0)),Sym("nil-env"))) }
   }
 
   def testMutInEval() = {
