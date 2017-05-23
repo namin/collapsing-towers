@@ -123,8 +123,9 @@ object Lisp {
       (if (equs 'refNew (car exp))      (maybe-lift (refNew ((eval (cadr exp)) env)))
       (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
       (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+      (if (equs 'delta-env (car exp))   (((eval (cadr exp)) env) env)
       (if (equs 'delta (car exp))       ((((eval (caddr exp)) env) (cadr exp)) env)
-      ((env (car exp)) ((eval (cadr exp)) env)))))))))))))))))))))))))
+      ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))))))))))))
     (((eval (car exp)) env) ((eval (cadr exp)) env))
     )))))""".
     replace("(cadr exp)","(car (cdr exp))").
@@ -420,6 +421,17 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
       App(App(App(App(App(App(App(App(eval_exp3,Var(1)),Sym("nil-env")), Var(1)), Sym("nil-env2")), Var(0)), Sym("nil-env3")), Var(2)), Sym("nil-env4"))) }
 
     check(c6)(mut_exp_anf.toString)
+  }
+
+  def testDeltaEnv() = {
+    println("// ------- test delta-env --------")
+    val d_src = "(lambda _ n (delta-env (lambda _ env (+ (env 'n) 1))))"
+    val Success(d_val, _) = parseAll(exp, d_src)
+    val r1 = run { evalms(List(d_val,d_val),App(App(App(eval_exp,Var(0)),Sym("nil-env")),Lit(2))) }
+    check(r1)("Cst(3)")
+
+    //TODO: same kind of error as for delta below
+    //val c1 = reifyc{ evalms(List(d_val,d_val),App(App(evalc_exp,Var(0)),Sym("nil-env"))) }
   }
 
   def testDelta() = {
