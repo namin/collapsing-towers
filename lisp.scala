@@ -350,8 +350,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     // -----------------------------------------------
     // interpretation
 
-    val r1 = run { evalms(List(fac_val,eval_cps_val),App(App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(2))),Lit(4))) }
-
+    val r1 = run { evalms(List(fac_val,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
     check(r1)("Cst(24)")
 
     // generation + interpretation
