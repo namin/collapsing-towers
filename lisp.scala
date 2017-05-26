@@ -137,23 +137,23 @@ object Lisp {
     (if (isNum               exp)       (k (maybe-lift exp))
     (if (isStr               exp)       (k (env exp))
     (if (isStr          (car exp))
-      (if (equs '+      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (+ v1 v2))))))
-      (if (equs '-      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (- v1 v2))))))
-      (if (equs '*      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (* v1 v2))))))
-      (if (equs 'equs   (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (equs v1 v2))))))
-      (if (equs 'if     (car exp))      (((eval (cadr exp)) env) (lambda _ vc (if vc (((eval (caddr exp)) env) k) (((eval (cadddr exp)) env) k))))
+      (if (equs '+      (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (+ v1 v2))))))))
+      (if (equs '-      (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (- v1 v2))))))))
+      (if (equs '*      (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (* v1 v2))))))))
+      (if (equs 'equs   (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (equs v1 v2))))))))
+      (if (equs 'if     (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ vc (if vc (((eval (caddr exp)) env) k) (((eval (cadddr exp)) env) k)))))
       (if (equs 'lambda (car exp))           (k (maybe-lift (lambda f x (maybe-lift ((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) f (if (equs y (caddr exp)) x (env y)))))))))
-      (if (equs 'let    (car exp))      (((eval (caddr exp)) env) (lambda _ v (let x v (((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) x (env y)))) k))))
-      (if (equs 'lift   (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (lift v))))
-      (if (equs 'nolift (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (nolift v))))
-      (if (equs 'isNum  (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (isNum v))))
-      (if (equs 'isStr  (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (isStr v))))
-      (if (equs 'cons   (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (maybe-lift (cons v1 v2)))))))
-      (if (equs 'car    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (car v))))
-      (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (cdr v))))
+      (if (equs 'let    (car exp))      (((eval (caddr exp)) env) (maybe-lift (lambda _ v (let x v (((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) x (env y)))) k)))))
+      (if (equs 'lift   (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (lift v)))))
+      (if (equs 'nolift (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (nolift v)))))
+      (if (equs 'isNum  (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (isNum v)))))
+      (if (equs 'isStr  (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (isStr v)))))
+      (if (equs 'cons   (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (maybe-lift (cons v1 v2)))))))))
+      (if (equs 'car    (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (car v)))))
+      (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (cdr v)))))
       (if (equs 'quote  (car exp))      (k (maybe-lift (cadr exp)))
-      (((eval (cadr exp)) env) (lambda _ v (((env (car exp)) v) k))))))))))))))))))
-    (((eval (car exp)) env) (lambda _ v1 (((eval (cadr exp)) env) (lambda _ v2 ((v1 v2) k)))))
+      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (((env (car exp)) v) k)))))))))))))))))))
+    (((eval (car exp)) env) (maybe-lift (lambda _ v1 (((eval (cadr exp)) env) (maybe-lift (lambda _ v2 ((v1 v2) k)))))))
     ))))))""".
     replace("(cadr exp)","(car (cdr exp))").
     replace("(caddr exp)","(car (cdr (cdr exp)))").
@@ -355,11 +355,12 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
     // generation + interpretation
 
-    // TODO: recursive functions don't work...
-    val d_src = "(lambda _ n (if n (* n (- n 1))  1))"
-    val Success(d_val, _) = parseAll(exp, d_src)
-    val c1 = reifyc { evalms(List(d_val,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    val c1 = reifyc { evalms(List(fac_val,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     //check(c1)(fac_exp_anf.toString)
+    println(pretty(c1, List()))
+
+    val r2 = run { evalms(Nil,App(App(c1,Lit(4)),Lam(Var(1)))) }
+    check(r2)("Cst(24)")
   }
 
   def testMutEval() = {
