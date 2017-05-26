@@ -142,7 +142,7 @@ object Lisp {
       (if (equs '*      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (* v1 v2))))))
       (if (equs 'equs   (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (equs v1 v2))))))
       (if (equs 'if     (car exp))      (((eval (cadr exp)) env) (lambda _ vc (if vc (((eval (caddr exp)) env) k) (((eval (cadddr exp)) env) k))))
-      (if (equs 'lambda (car exp))           (k (maybe-lift (lambda f x (lambda _ k (((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) f (if (equs y (caddr exp)) x (env y))))) k)))))
+      (if (equs 'lambda (car exp))           (k (maybe-lift (lambda f x (maybe-lift ((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) f (if (equs y (caddr exp)) x (env y)))))))))
       (if (equs 'let    (car exp))      (((eval (caddr exp)) env) (lambda _ v (let x v (((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) x (env y)))) k))))
       (if (equs 'lift   (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (lift v))))
       (if (equs 'nolift (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (nolift v))))
@@ -355,8 +355,10 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
     // generation + interpretation
 
-    // TODO: doesn't work... maybe we need to lift some of the continuation code?
-    //val c1 = reifyc { evalms(List(fac_val,eval_cps_val),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
+    // TODO: recursive functions don't work...
+    val d_src = "(lambda _ n (if n (* n (- n 1))  1))"
+    val Success(d_val, _) = parseAll(exp, d_src)
+    val c1 = reifyc { evalms(List(d_val,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     //check(c1)(fac_exp_anf.toString)
   }
 
