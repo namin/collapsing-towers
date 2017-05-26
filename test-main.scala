@@ -9,6 +9,7 @@ object TestMain {
 
     testFac1()
     testEval()
+    testEvalCps()
     testDeltaEnv()
     testDelta()
     //testMutEval()

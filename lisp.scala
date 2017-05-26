@@ -132,6 +132,33 @@ object Lisp {
     replace("(caddr exp)","(car (cdr (cdr exp)))").
     replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
 
+  val eval_cps_poly_src = """
+  (lambda eval exp (lambda _ env (lambda _ k
+    (if (isNum               exp)       (k (maybe-lift exp))
+    (if (isStr               exp)       (k (env exp))
+    (if (isStr          (car exp))
+      (if (equs '+      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (+ v1 v2))))))
+      (if (equs '-      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (- v1 v2))))))
+      (if (equs '*      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (* v1 v2))))))
+      (if (equs 'equs   (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (equs v1 v2))))))
+      (if (equs 'if     (car exp))      (((eval (cadr exp)) env) (lambda _ vc (if vc (((eval (caddr exp)) env) k) (((eval (cadddr exp)) env) k))))
+      (if (equs 'lambda (car exp))           (k (maybe-lift (lambda f x (lambda _ k (((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) f (if (equs y (caddr exp)) x (env y))))) k)))))
+      (if (equs 'let    (car exp))      (((eval (caddr exp)) env) (lambda _ v (let x v (((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) x (env y)))) k))))
+      (if (equs 'lift   (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (lift v))))
+      (if (equs 'nolift (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (nolift v))))
+      (if (equs 'isNum  (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (isNum v))))
+      (if (equs 'isStr  (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (isStr v))))
+      (if (equs 'cons   (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (maybe-lift (cons v1 v2)))))))
+      (if (equs 'car    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (car v))))
+      (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (cdr v))))
+      (if (equs 'quote  (car exp))      (k (maybe-lift (cadr exp)))
+      (((eval (cadr exp)) env) (lambda _ v (((env (car exp)) v) k))))))))))))))))))
+    (((eval (car exp)) env) (lambda _ v1 (((eval (cadr exp)) env) (lambda _ v2 ((v1 v2) k)))))
+    ))))))""".
+    replace("(cadr exp)","(car (cdr exp))").
+    replace("(caddr exp)","(car (cdr (cdr exp)))").
+    replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
+
   val eval_vc_poly_src = s"""(lambda _ c
 ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (refRead c) (trace-lift 1))) (trace-lift 0)) (env exp))")}
 )
@@ -162,6 +189,9 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   val evalt_vc_src = eval_vc_poly_src.replace("trace-lift","lift").replace("maybe-lift","nolift")  // transformer
 
 
+  val eval_cps_src = eval_cps_poly_src.replace("maybe-lift","nolift") // plain interpreter
+  val evalc_cps_src = eval_cps_poly_src.replace("maybe-lift","lift")  // generating extension = compiler
+
   // TODO: next step: take maybe-lift as parameter instead of simulating macros
 
   // NOTE: have to be careful with 'equs': if arg is not a string, it might create a code object */
@@ -173,7 +203,8 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   val Success(eval_vc_val, _) = parseAll(exp, eval_vc_src)
   val Success(evalc_vc_val, _) = parseAll(exp, evalc_vc_src)
   val Success(evalt_vc_val, _) = parseAll(exp, evalt_vc_src)
-
+  val Success(eval_cps_val, _) = parseAll(exp, eval_cps_src)
+  val Success(evalc_cps_val, _) = parseAll(exp, evalc_cps_src)
 
   val fac_exp = trans(fac_val,List("arg"))
   val mut_exp = trans(mut_val,List("arg"))
@@ -182,6 +213,8 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   val eval_vc_exp = trans(eval_vc_val,List("arg","arg2", "arg3"))
   val evalc_vc_exp = trans(evalc_vc_val,List("arg","arg2", "arg3"))
   val evalt_vc_exp = trans(evalt_vc_val,List("arg","arg2", "arg3"))
+  val eval_cps_exp = trans(eval_cps_val,List("arg","arg2"))
+  val evalc_cps_exp = trans(evalc_cps_val,List("arg","arg2"))
 
   val fac_exp_anf = reify { anf(List(Sym("XX")),fac_exp) }
   val mut_exp_anf = reify { anf(List(Sym("XX")),mut_exp) }
@@ -190,7 +223,8 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   val eval_vc_exp_anf = reify { anf(List(Sym("XX"),Sym("XX"),Sym("XX")),eval_vc_exp) }
   val evalc_vc_exp_anf = reify { anf(List(Sym("XX"),Sym("XX"),Sym("XX")),evalc_vc_exp) }
   val evalt_vc_exp_anf = reify { anf(List(Sym("XX"),Sym("XX"),Sym("XX")),evalt_vc_exp) }
-
+  val eval_cps_exp_anf = reify { anf(List(Sym("XX"),Sym("XX")),eval_cps_exp) }
+  val evalc_cps_exp_anf = reify { anf(List(Sym("XX"),Sym("XX")),evalc_cps_exp) }
 
   // ********************* test cases *********************
 
@@ -308,6 +342,23 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
       App(App(App(App(App(App(App(App(eval_exp3,Var(1)),Sym("nil-env")), Var(1)), Sym("nil-env2")), Var(0)), Sym("nil-env3")), Var(2)), Sym("nil-env4"))) }
 
     check(c6)(fac_exp_anf.toString)
+  }
+
+  def testEvalCps() = {
+    println("// ------- test eval CPS --------")
+
+    // -----------------------------------------------
+    // interpretation
+
+    val r1 = run { evalms(List(fac_val,eval_cps_val),App(App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(2))),Lit(4))) }
+
+    check(r1)("Cst(24)")
+
+    // generation + interpretation
+
+    // TODO: doesn't work... maybe we need to lift some of the continuation code?
+    //val c1 = reifyc { evalms(List(fac_val,eval_cps_val),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
+    //check(c1)(fac_exp_anf.toString)
   }
 
   def testMutEval() = {
