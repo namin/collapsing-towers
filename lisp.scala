@@ -151,8 +151,9 @@ object Lisp {
       (if (equs 'cons   (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (maybe-lift (cons v1 v2)))))))))
       (if (equs 'car    (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (car v)))))
       (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (cdr v)))))
+      (if (equs 'call/cc (car exp))     ((((eval (cadr exp)) env) (maybe-lift (lambda _ p (p (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k v))))))))) k)
       (if (equs 'quote  (car exp))      (k (maybe-lift (cadr exp)))
-      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (((env (car exp)) v) k)))))))))))))))))))
+      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (((env (car exp)) v) k))))))))))))))))))))
     (((eval (car exp)) env) (maybe-lift (lambda _ v1 (((eval (cadr exp)) env) (maybe-lift (lambda _ v2 ((v1 v2) k)))))))
     ))))))""".
     replace("(cadr exp)","(car (cdr exp))").
@@ -361,6 +362,16 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
     val r2 = run { evalms(Nil,App(App(c1,Lit(4)),Lam(Var(1)))) }
     check(r2)("Cst(24)")
+
+    // call/cc
+    val Success(d3_val, _) = parseAll(exp, "(- (call/cc (lambda _ k 2)) 1)")
+    val r3 = run { evalms(List(d3_val,Cst(0)), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(r3)("Cst(1)")
+
+    val Success(d4_val, _) = parseAll(exp, "(- (call/cc (lambda _ k (* 3 (k 2)))) 1)")
+    val r4 = run { evalms(List(d4_val,Cst(0)), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(r4)("Cst(1)")
+
   }
 
   def testMutEval() = {
