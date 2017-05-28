@@ -151,7 +151,7 @@ object Lisp {
       (if (equs 'cons   (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (maybe-lift (cons v1 v2)))))))
       (if (equs 'car    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (car v))))
       (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (cdr v))))
-      (if (equs 'call/cc (car exp))     ((((eval (cadr exp)) env) (maybe-lift (lambda _ p (p (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k v))))))))) k)
+      (if (equs 'call/cc (car exp))     ((((eval (cadr exp)) env) (nolift (lambda _ p (p (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k v)))))))))  (maybe-lift (lambda _ v (k v))))
       (if (equs 'quote  (car exp))      (k (maybe-lift (cadr exp)))
       (((eval (cadr exp)) env) (nolift (lambda _ v (((env (car exp)) v) (maybe-lift (lambda _ x (k x))) ))))))))))))))))))))
     (((eval (car exp)) env) (nolift (lambda _ v1 (((eval (cadr exp)) env) (nolift (lambda _ v2 ((v1 v2) (maybe-lift (lambda _ x (k x))) )))))))
@@ -438,6 +438,49 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     val Success(d4_val, _) = parseAll(exp, "(- (call/cc (lambda _ k (* 3 (k 2)))) 1)")
     val r4 = run { evalms(List(d4_val,Cst(0)), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r4)("Cst(1)")
+
+
+    // generation
+
+    val c3 = reifyc { evalms(List(d3_val,Cst(0)), App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(pretty(c3, List()))("""
+    |let x0 = 
+    |  fun f0 x1 
+    |    fun f2 x3 (x3 2) in 
+    |let x1 = 
+    |  fun f1 x2 
+    |    fun f3 x4 (x2 - 1) in 
+    |let x2 = (x0 x1) in 
+    |let x3 = 
+    |  fun f3 x4 (x4 - 1) in (x2 x3)
+    """.stripMargin)
+
+    val r3a = run { evalms(Nil,c3) }
+    check(r3a)("Cst(1)")
+
+
+    val c4 = reifyc { evalms(List(d4_val,Cst(0)), App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(pretty(c4, List()))("""
+    |let x0 = 
+    |  fun f0 x1 
+    |    fun f2 x3 
+    |      let x4 = (x1 2) in 
+    |      let x5 = 
+    |        fun f5 x6 
+    |          let x7 = (3 * x6) in (x3 x7) in (x4 x5) in 
+    |let x1 = 
+    |  fun f1 x2 
+    |    fun f3 x4 (x2 - 1) in 
+    |let x2 = (x0 x1) in 
+    |let x3 = 
+    |  fun f3 x4 (x4 - 1) in (x2 x3)
+    """.stripMargin)
+
+    val r4a = run { evalms(Nil,c4) }
+    check(r4a)("Cst(1)")
+
+
+
   }
 
   def testMutEval() = {
