@@ -137,24 +137,24 @@ object Lisp {
     (if (isNum               exp)       (k (maybe-lift exp))
     (if (isStr               exp)       (k (env exp))
     (if (isStr          (car exp))
-      (if (equs '+      (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (+ v1 v2))))))))
-      (if (equs '-      (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (- v1 v2))))))))
-      (if (equs '*      (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (* v1 v2))))))))
-      (if (equs 'equs   (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (equs v1 v2))))))))
-      (if (equs 'if     (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ vc (if vc (((eval (caddr exp)) env) k) (((eval (cadddr exp)) env) k)))))
+      (if (equs '+      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (+ v1 v2))))))
+      (if (equs '-      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (- v1 v2))))))
+      (if (equs '*      (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (* v1 v2))))))
+      (if (equs 'equs   (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (equs v1 v2))))))
+      (if (equs 'if     (car exp))      (((eval (cadr exp)) env) (lambda _ vc (if vc (((eval (caddr exp)) env) k) (((eval (cadddr exp)) env) k))))
       (if (equs 'lambda (car exp))           (k (maybe-lift (lambda f x (maybe-lift ((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) f (if (equs y (caddr exp)) x (env y)))))))))
       (if (equs 'let    (car exp))      (((eval (caddr exp)) env) (maybe-lift (lambda _ v (let x v (((eval (cadddr exp)) (lambda _ y (if (equs y (cadr exp)) x (env y)))) k)))))
-      (if (equs 'lift   (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (lift v)))))
-      (if (equs 'nolift (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (nolift v)))))
-      (if (equs 'isNum  (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (isNum v)))))
-      (if (equs 'isStr  (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (isStr v)))))
-      (if (equs 'cons   (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v1 (((eval (caddr exp)) env) (maybe-lift (lambda _ v2 (k (maybe-lift (cons v1 v2)))))))))
-      (if (equs 'car    (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (car v)))))
-      (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (k (cdr v)))))
+      (if (equs 'lift   (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (lift v))))
+      (if (equs 'nolift (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (nolift v))))
+      (if (equs 'isNum  (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (isNum v))))
+      (if (equs 'isStr  (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (isStr v))))
+      (if (equs 'cons   (car exp))      (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (maybe-lift (cons v1 v2)))))))
+      (if (equs 'car    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (car v))))
+      (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (cdr v))))
       (if (equs 'call/cc (car exp))     ((((eval (cadr exp)) env) (maybe-lift (lambda _ p (p (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k v))))))))) k)
       (if (equs 'quote  (car exp))      (k (maybe-lift (cadr exp)))
-      (((eval (cadr exp)) env) (maybe-lift (lambda _ v (((env (car exp)) v) k))))))))))))))))))))
-    (((eval (car exp)) env) (maybe-lift (lambda _ v1 (((eval (cadr exp)) env) (maybe-lift (lambda _ v2 ((v1 v2) k)))))))
+      (((eval (cadr exp)) env) (nolift (lambda _ v (((env (car exp)) v) (maybe-lift (lambda _ x (k x))) ))))))))))))))))))))
+    (((eval (car exp)) env) (nolift (lambda _ v1 (((eval (cadr exp)) env) (nolift (lambda _ v2 ((v1 v2) (maybe-lift (lambda _ x (k x))) )))))))
     ))))))""".
     replace("(cadr exp)","(car (cdr exp))").
     replace("(caddr exp)","(car (cdr (cdr exp)))").
@@ -345,7 +345,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     check(c6)(fac_exp_anf.toString)
   }
 
-  def testEvalCps() = {
+  def testEvalCps(): Unit = {
     println("// ------- test eval CPS --------")
 
     // -----------------------------------------------
@@ -354,11 +354,78 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     val r1 = run { evalms(List(fac_val,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
     check(r1)("Cst(24)")
 
-    // generation + interpretation
+    // generation + interpretation (small checks)
+
+    val Success(p11,_) = parseAll(exp, "(lambda f x (+ x 1))")
+    val c11 = reifyc { evalms(List(p11,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(pretty(c11, List()))("""
+    |fun f0 x1 
+    |  fun f2 x3 
+    |    let x4 = (x1 + 1) in (x3 x4)
+    """.stripMargin) // note: reusing the caller continuation
+
+    val Success(p12,_) = parseAll(exp, "(lambda f x (f x))")
+    val c12 = reifyc { evalms(List(p12,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(pretty(c12, List()))("""
+    |fun f0 x1 
+    |  fun f2 x3 
+    |    let x4 = (f0 x1) in 
+    |    let x5 = 
+    |      fun f5 x6 (x3 x6) in (x4 x5)
+    """.stripMargin) // note: x3 eta-expanded into x5 (naive cps transform)
+
+    val Success(p13,_) = parseAll(exp, "(lambda f x (f (+ x 1)))")
+    val c13 = reifyc { evalms(List(p13,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(pretty(c13, List()))("""
+    |fun f0 x1 
+    |  fun f2 x3 
+    |    let x4 = (x1 + 1) in 
+    |    let x5 = (f0 x4) in 
+    |    let x6 = 
+    |      fun f6 x7 (x3 x7) in (x5 x6)
+    """.stripMargin) // note: x3 eta-expanded into x6 (naive cps transform)
+
+    val Success(p14,_) = parseAll(exp, "(lambda f x (+ 1 (f x)))")
+    val c14 = reifyc { evalms(List(p14,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(pretty(c14, List()))("""
+    |fun f0 x1 
+    |  fun f2 x3 
+    |    let x4 = (f0 x1) in 
+    |    let x5 = 
+    |      fun f5 x6 
+    |        let x7 = (1 + x6) in (x3 x7) in (x4 x5)
+    """.stripMargin)
+
+    val Success(p15,_) = parseAll(exp, "(let f (lambda f x (+ 1 x)) (f 3))")
+    val c15 = reifyc { evalms(List(p15,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(pretty(c15, List()))("""
+    |let x0 = 
+    |  fun f0 x1 
+    |    let x2 = (x1 3) in 
+    |    let x3 = 
+    |      fun f3 x4 x4 in (x2 x3) in 
+    |let x1 = 
+    |  fun f1 x2 
+    |    fun f3 x4 
+    |      let x5 = (1 + x2) in (x4 x5) in (x0 x1)
+    """.stripMargin)
+
+
+
+    // generation + interpretation (factorial)
 
     val c1 = reifyc { evalms(List(fac_val,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
-    //check(c1)(fac_exp_anf.toString)
-    println(pretty(c1, List()))
+    check(pretty(c1, List()))("""
+    |fun f0 x1 
+    |  fun f2 x3 
+    |    if (x1) 
+    |      let x4 = (x1 - 1) in 
+    |      let x5 = (f0 x4) in 
+    |      let x6 = 
+    |        fun f6 x7 
+    |          let x8 = (x1 * x7) in (x3 x8) in (x5 x6) 
+    |    else (x3 1)
+    """.stripMargin)
 
     val r2 = run { evalms(Nil,App(App(c1,Lit(4)),Lam(Var(1)))) }
     check(r2)("Cst(24)")
@@ -371,7 +438,6 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     val Success(d4_val, _) = parseAll(exp, "(- (call/cc (lambda _ k (* 3 (k 2)))) 1)")
     val r4 = run { evalms(List(d4_val,Cst(0)), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r4)("Cst(1)")
-
   }
 
   def testMutEval() = {
