@@ -153,7 +153,8 @@ object Lisp {
       (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (cdr v))))
       (if (equs 'call/cc (car exp))     ((((eval (cadr exp)) env) (nolift (lambda _ p (p (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k v)))))))))  (maybe-lift (lambda _ v (k v))))
       (if (equs 'quote  (car exp))      (k (maybe-lift (cadr exp)))
-      (((eval (cadr exp)) env) (nolift (lambda _ v (((env (car exp)) v) (maybe-lift (lambda _ x (k x))) ))))))))))))))))))))
+      (if (equs 'EM     (car exp))      'em-not-supported
+      (((eval (cadr exp)) env) (nolift (lambda _ v (((env (car exp)) v) (maybe-lift (lambda _ x (k x))) )))))))))))))))))))))
     (((eval (car exp)) env) (nolift (lambda _ v1 (((eval (cadr exp)) env) (nolift (lambda _ v2 ((v1 v2) (maybe-lift (lambda _ x (k x))) )))))))
     ))))))""".
     replace("(cadr exp)","(car (cdr exp))").
@@ -180,6 +181,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
   // so far, we support only one level of EM
   val eval_em_poly_src = eval_poly_src.replace("'em-not-supported","(exec/env 0 (trans-quote/env (car (cdr exp))))")
+  val eval_em_cps_poly_src = eval_cps_poly_src.replace("'em-not-supported","(exec/env 0 (trans-quote/env (car (cdr exp))))")
 
   val eval_src = eval_poly_src.replace("maybe-lift","nolift") // plain interpreter
   val evalc_src = eval_poly_src.replace("maybe-lift","lift")  // generating extension = compiler
@@ -728,17 +730,44 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     run(s"""
     (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_em_poly_src exp) 'nil)))
     (let eval          (eval_poly (lambda _ e e))
-    (let fac           (eval (quote (lambda f x (EM (* 6 (env 'x))))))
-    (fac 4))))""")
+    (let fun           (eval (quote (lambda f x (EM (* 6 (env 'x))))))
+    (fun 4))))""")
 
     // test EM compiled
     run(s"""
     (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_em_poly_src exp) 'nil)))
     (let evalc         (eval_poly (lambda _ e (lift e)))
-    (let fac           (exec (evalc (quote (lambda f x (EM (* (lift 6) (env 'x)))))))
-    ; fac compiles to (lambda f x (6 * x))
-    (fac 4))))""")
+    (let fun           (exec (evalc (quote (lambda f x (EM (* (lift 6) (env 'x)))))))
+    ; fun compiles to (lambda f x (6 * x))
+    (fun 4))))""")
 
+
+    // EM + CSP interpreted
+    run(s"""
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp ((($eval_em_cps_poly_src exp) 'nil) (lambda k v v))))
+    (let eval          (eval_poly (lambda _ e e))
+    (let fun           (eval (quote (lambda f x (EM (k (+ (env 'x) 7))))))
+    ((fun 3) (lambda k v v)))))""")
+    // function call expects continuation
+
+
+    // EM + CSP: implement shift as user-level function
+
+    val shift = """
+    (lambda _ f (EM ((env 'f) (lambda _ v (lambda _ k1 (k1 (k v)))))))
+    """
+
+    val example = s"""
+    (let shift $shift
+    (+ 3 (shift (lambda _ k (k (k (k 1)))))))
+    """
+
+    run(s"""
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp ((($eval_em_cps_poly_src exp) 'nil) (lambda k v v))))
+    (let eval          (eval_poly (lambda _ e e))
+    (let res           ((eval (quote $example)) (lambda k v v))
+    res)))""")
+    // why do we have to pass (lambda k v v) twice, once in eval_poly and in eval again??
   }
 
 
