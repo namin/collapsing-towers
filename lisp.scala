@@ -742,19 +742,18 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     (fun 4))))""")
 
 
-    // EM + CSP interpreted
+    // EM + CPS interpreted
     run(s"""
     (let eval_poly     (lambda _ maybe-lift (lambda _ exp ((($eval_em_cps_poly_src exp) 'nil) (lambda k v v))))
     (let eval          (eval_poly (lambda _ e e))
     (let fun           (eval (quote (lambda f x (EM (k (+ (env 'x) 7))))))
     ((fun 3) (lambda k v v)))))""")
-    // function call expects continuation
+    
 
-
-    // EM + CSP: implement shift as user-level function
+    // EM + CPS: implement shift as user-level function
 
     val shift = """
-    (lambda _ f (EM ((env 'f) (lambda _ v (lambda _ k1 (k1 (k v)))))))
+    (lambda _ f (EM (((env 'f) (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k1 (k v))))))) (maybe-lift (lambda _ x x)))))
     """
 
     val example = s"""
@@ -765,9 +764,15 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     run(s"""
     (let eval_poly     (lambda _ maybe-lift (lambda _ exp ((($eval_em_cps_poly_src exp) 'nil) (lambda k v v))))
     (let eval          (eval_poly (lambda _ e e))
-    (let res           ((eval (quote $example)) (lambda k v v))
+    (let res           (eval (quote $example))
     res)))""")
-    // why do we have to pass (lambda k v v) twice, once in eval_poly and in eval again??
+
+    // EM + CPS + shift + compiled
+    run(s"""
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp ((($eval_em_cps_poly_src exp) 'nil) (lambda k v v))))
+    (let eval          (eval_poly (lambda _ e (lift e)))
+    (let res           (eval (quote $example))
+    res)))""")
   }
 
 
