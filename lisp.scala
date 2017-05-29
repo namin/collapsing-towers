@@ -773,6 +773,13 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     (let eval          (eval_poly (lambda _ e (lift e)))
     (let res           (eval (quote $example))
     res)))""")
+
+    // note: lift eval_poly doesn't work
+    run(s"""
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_em_poly_src exp) 'nil)))
+    (let eval          (eval_poly (lambda _ e e))
+    (let res           (eval (quote (((lambda _ x (EM env)) 1) 'x)))
+    res)))""")
   }
 
 
