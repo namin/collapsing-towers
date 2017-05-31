@@ -153,8 +153,23 @@ object Lisp {
       (if (equs 'cdr    (car exp))      (((eval (cadr exp)) env) (lambda _ v (k (cdr v))))
       (if (equs 'call/cc (car exp))     ((((eval (cadr exp)) env) (nolift (lambda _ p (p (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k v)))))))))  (maybe-lift (lambda _ v (k v))))
       (if (equs 'quote  (car exp))      (k (maybe-lift (cadr exp)))
+      (if (equs 'begin (car exp))
+          (if (equs '. (cdr exp))       (k (maybe-lift 'done))
+          (if (equs '. (cdr (cdr exp))) (((eval (cadr exp)) env) k)
+                                        (((eval (cadr exp)) env) (lambda _ _ (((eval (cons 'begin (cdr (cdr exp)))) env) k)))))
+      (if (equs 'amb (car exp))         (((eval (cons 'let (cons 'prev-amb-fail (cons 'amb-fail
+                                          (cons 'call/cc (cons (cons 'lambda (cons '_ (cons 'sk (cons (cons 'begin
+                                            (let map (lambda map f (lambda _ xs (if (equs '. xs) '. (cons (f (car xs)) ((map f) (cdr xs))))))
+                                             ((map (lambda _ alt (cons 'call/cc (cons (cons 'lambda (cons '_ (cons 'fk (cons (cons 'begin
+                                                (cons (cons 'refWrite (cons 'amb-fail (cons 'prev-amb-fail '.)))
+                                                (cons (cons 'sk (cons 'alt '.)) '.))) '.)))) '.)))) (cdr exp))))
+                                            '.)))) '.)))))
+                                            ) env) k)
+      (if (equs 'refNew (car exp))      (maybe-lift (refNew ((eval (cadr exp)) env)))
+      (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
+      (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
       (if (equs 'EM     (car exp))      'em-not-supported
-      (((eval (cadr exp)) env) (nolift (lambda _ v (((env (car exp)) v) (maybe-lift (lambda _ x (k x))) )))))))))))))))))))))
+      (((eval (cadr exp)) env) (nolift (lambda _ v (((env (car exp)) v) (maybe-lift (lambda _ x (k x))) ))))))))))))))))))))))))))
     (((eval (car exp)) env) (nolift (lambda _ v1 (((eval (cadr exp)) env) (nolift (lambda _ v2 ((v1 v2) (maybe-lift (lambda _ x (k x))) )))))))
     ))))))""".
     replace("(cadr exp)","(car (cdr exp))").
@@ -483,6 +498,26 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
 
 
+  }
+
+  def testEvalAmb() = {
+    println("// ------- test eval CPS AMB --------")
+
+    val Success(p1,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'done)) (amb 1))")
+    val r1 = run { evalms(List(p1,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(r1)("Cst(1)")
+
+    val Success(p2,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'done)) (amb (amb) 1))")
+    val r2 = run { evalms(List(p2,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(r2)("Cst(1)")
+
+    val Success(p3,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'done)) (if (amb 0 1) 1 (amb)))")
+    val r3 = run { evalms(List(p3,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(r3)("Cst(1)")
+
+    val Success(p4,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'done)) (let i (amb 1 2 3 4 5) (if (equs 12 (* i 3)) i (amb)))) ")
+    val r4 = run { evalms(List(p4,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    check(r4)("Cst(4)")
   }
 
   def testMutEval() = {
