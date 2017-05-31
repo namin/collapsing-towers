@@ -163,11 +163,13 @@ object Lisp {
 
 (cons 'call/cc (cons (cons 'lambda (cons '_ (cons 'sk
 (cons (cons 'begin
-(((lambda map f (lambda _ xs (if (if (isStr xs) (equs '. xs) 0) '. (cons (f (car xs)) ((map f) (cdr xs))))))
+(((lambda map f (lambda _ xs (if (if (isStr xs) (equs '. xs) 0)
+(cons '(prev-amb-fail ''continue) '.)
+(cons (f (car xs)) ((map f) (cdr xs))))))
  (lambda _ alt (cons 'call/cc (cons (cons 'lambda (cons '_ (cons 'fk (cons (cons 'begin
-   (cons (cons 'refWrite (cons 'amb-fail (cons 'prev-amb-fail '.)))
-   (cons (cons 'sk (cons alt '.)) '.))) '.)))) '.)))) (cdr exp))
-)'.)
+   (cons (cons 'refWrite (cons 'amb-fail
+(cons (cons 'lambda (cons '_ (cons '_ (cons (cons 'begin (cons '(refWrite amb-fail prev-amb-fail) (cons (cons 'fk (cons ''fail '.)) '.))) '.)))) '.)))
+   (cons (cons 'sk (cons alt '.)) '.))) '.)))) '.)))) (cdr exp)))'.)
 ))) '.))
 
 
