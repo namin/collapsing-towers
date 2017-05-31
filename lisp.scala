@@ -164,11 +164,11 @@ object Lisp {
 (cons 'call/cc (cons (cons 'lambda (cons '_ (cons 'sk
 (cons (cons 'begin
 (((lambda map f (lambda _ xs (if (if (isStr xs) (equs '. xs) 0)
-(cons '(prev-amb-fail ''continue) '.)
+(cons '(prev-amb-fail 1) '.)
 (cons (f (car xs)) ((map f) (cdr xs))))))
  (lambda _ alt (cons 'call/cc (cons (cons 'lambda (cons '_ (cons 'fk (cons (cons 'begin
    (cons (cons 'refWrite (cons 'amb-fail
-(cons (cons 'lambda (cons '_ (cons '_ (cons (cons 'begin (cons '(refWrite amb-fail prev-amb-fail) (cons (cons 'fk (cons ''fail '.)) '.))) '.)))) '.)))
+(cons (cons 'lambda (cons '_ (cons '_ (cons (cons 'begin (cons '(refWrite amb-fail prev-amb-fail) (cons (cons 'fk (cons 0 '.)) '.))) '.)))) '.)))
    (cons (cons 'sk (cons alt '.)) '.))) '.)))) '.)))) (cdr exp)))'.)
 ))) '.))
 
@@ -541,7 +541,8 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     val r5 = run { evalms(List(p5,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(App(App(Var(3),Lit(1)),Lam(Var(5)))))) }
     check(r5)("Cst(3)")
 
-    //val c5 = reifyc { evalms(List(p5,evalc_cps_val), App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    val c5 = reifyc { evalms(List(p5,evalc_cps_val), App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
+    println(pretty(c5, Nil))
   }
 
   def testMutEval() = {
