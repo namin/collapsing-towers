@@ -519,23 +519,23 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     val a2 = run { evalms(List(b2,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(a2)("Cst(2)")
 
-    val Success(p1,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'done)) (amb 1))")
+    val Success(p1,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'error)) (amb 1))")
     val r1 = run { evalms(List(p1,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r1)("Cst(1)")
 
-    val Success(p2,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'done)) (amb (amb) 1))")
+    val Success(p2,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'error)) (amb (amb) 1))")
     val r2 = run { evalms(List(p2,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r2)("Cst(1)")
 
-    val Success(p3,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'done)) (if (amb 0 1) 1 (amb)))")
+    val Success(p3,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'error)) (if (amb 0 1) 1 (amb)))")
     val r3 = run { evalms(List(p3,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r3)("Cst(1)")
 
-    val Success(p4,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'done)) (let i (amb 1 2 3) (let j (amb 1 2 3) (if (- i j) (amb (+ i j)) (amb)))))")
+    val Success(p4,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'error)) (let i (amb 1 2 3) (let j (amb 1 2 3) (if (- i j) (amb (+ i j)) (amb)))))")
     val r4 = run { evalms(List(p4,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r4)("Cst(3)")
 
-    val Success(p5,_) = parseAll(exp, "(lambda _ x (let amb-fail (refNew (lambda _ () 'done)) (let i (amb x 2 3) (let j (amb 1 2 3) (if (- i j) (amb (+ i j)) (amb))))))")
+    val Success(p5,_) = parseAll(exp, "(lambda _ x (let amb-fail (refNew (lambda _ () 'error)) (let i (amb x 2 3) (let j (amb 1 2 3) (if (- i j) (amb (+ i j)) (amb))))))")
     val r5 = run { evalms(List(p5,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(App(App(Var(3),Lit(1)),Lam(Var(5)))))) }
     check(r5)("Cst(3)")
 
