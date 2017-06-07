@@ -21,7 +21,11 @@ object TestMain {
 
     //testUnstaging() // experimental
 
-    println("done")
+    println("done with tests")
+    println("")
+    println("PINK BENCHMARKS")
+    benchFac()
+    //TODO:benchMatches()
   }
 
 }

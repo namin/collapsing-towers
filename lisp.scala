@@ -823,4 +823,20 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
   }
 
+  def benchFac() = {
+    import Bench._
+    println("fac #,evaluated,compiled,traced evaluated,traced compiled")
+    val counter_cell = new Cell(Cst(0))
+    val fac_compiled = reifyc { evalms(List(fac_val,eval_val),App(App(evalc_exp,Var(0)),Sym("nil-env"))) }
+    val fac_traced_compiled = reifyc { evalms(List(fac_val,eval_val,counter_cell),App(App(App(evalc_vc_exp,LiftRef(Var(2))),Var(0)),Sym("nil-env"))) }
+
+    for (i <- 0 until 10) {
+      val t1 = bench(run { evalms(List(fac_val,eval_val),App(App(App(eval_exp,Var(0)),Sym("nil-env")),Lit(i))) })
+      val t2 = bench(run { evalms(Nil,App(fac_compiled,Lit(i))) })
+      val t3 = bench(run { evalms(List(fac_val,eval_val,counter_cell),
+        App(App(App(App(eval_vc_exp,Var(2)),Var(0)),Sym("nil-env")),Lit(i))) })
+      val t4 = bench(run { evalms(Nil,App(fac_traced_compiled,Lit(i))) })
+      println(s"$i,$t1,$t2,$t3,$t4")
+    }
+  }
 }
