@@ -834,6 +834,26 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     (let res           (eval (quote $example))
     res)))""")
 
+    // amb using shift -- doesn't work!
+    val amb = s"""
+    (let foreach (lambda foreach xs (lambda _ k (if (isStr xs)
+      (if (equs '. xs) 'done (k xs))
+      (begin (k (car xs)) (foreach (cdr xs))))))
+    (lambda _ xs (shift (lambda _ k ((foreach xs) k)))))
+    """
+
+    val example_amb = s"""
+    (let shift $shift
+    (let umb $amb
+    (umb (cons (umb '()) '(1)))))
+    """
+
+    run(s"""
+    (let eval_poly     (lambda _ maybe-lift (lambda _ exp ((($eval_em_cps_poly_src exp) 'nil) (lambda k v v))))
+    (let eval          (eval_poly (lambda _ e e))
+    (let res           (eval (quote $example_amb))
+    res)))""")
+
     // note: lift eval_poly doesn't work
     run(s"""
     (let eval_poly     (lambda _ maybe-lift (lambda _ exp (($eval_em_poly_src exp) 'nil)))
