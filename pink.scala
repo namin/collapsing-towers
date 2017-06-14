@@ -237,5 +237,19 @@ object Pink_macro extends PinkBase {
     val v4 = parseExp("((macro _ e (car e)) (+ 1 0))")
     val r4 = run { evalms(List(v4), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) }
     check(r4)("Cst(1)")
+
+
+    // begin as a macro
+    def begin_src(body: String) = commonReplace(s"""
+      (let begin-list (lambda rec xs (if (sym? (cdr xs)) (car xs)
+         (cons (cons 'lambda (cons '_ (cons '_ (cons (rec (cdr xs)) '.))))
+         (cons (car xs) '.))))
+      (let begin (macro _ xs (begin-list xs))
+      $body
+      ))""")
+    val v5 = parseExp(begin_src("(begin 1 2 3)"))
+    val r5 = run { evalms(List(v5), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) }
+    check(r5)("Cst(3)")
+
   }
 }
