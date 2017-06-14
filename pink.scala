@@ -95,8 +95,15 @@ object Pink_CPS extends PinkBase {
   val evc_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e (lift e))) eval) e))"""
 
   override def test() = {
+    // interpretation of fac
     val r1 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) }
     check(r1)("Cst(24)")
+
+    // compilation of fac
+    val c2 = reifyc { evalms(List(fac_val),App(App(App(evc_exp1,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
+    val r2 = run { evalms(Nil, App(App(c2, Lit(4)),Lam(Var(1)))) }
+    check(r2)("Cst(24)")
+
   }
 }
 
