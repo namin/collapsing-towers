@@ -178,7 +178,7 @@ object Pink_macro extends PinkBase {
     (if (eq?  'lambda (car exp))        (k (l (lambda f x (l (((eval l) (cadddr exp)) 
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))))
     (if (eq?  'macro (car exp))    (k (cons 'macro (lambda f x (((eval (lambda _ e e)) (cadddr exp)) 
-      (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y))))))))
+      (lambda _ y (if (eq? y (cadr exp)) (cons 'macro f) (if (eq? y (caddr exp)) x (env y))))))))
     (if (eq?  'let    (car exp))   ((((eval l) (caddr exp)) env) (l (lambda _ v (let x v ((((eval l) (cadddr exp)) (lambda _ y (if (eq?  y (cadr exp)) x (env y)))) k)))))
     (if (eq?  'lift   (car exp))   ((((eval l) (cadr exp)) env) (lambda _ v (k (lift v))))
     (if (eq?  'num?   (car exp))   ((((eval l) (cadr exp)) env) (lambda _ v (k (num? v))))

@@ -343,7 +343,7 @@ object Base {
         case (Code(s1)) =>
           Code(reflect(IsPair(s1)))
         case v => 
-          Cst(if (v.isInstanceOf[Pair]) 1 else 0)
+          Cst(if (v.isInstanceOf[Tup]) 1 else 0)
       }
 
     case IsCode(e1) =>
