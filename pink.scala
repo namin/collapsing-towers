@@ -66,6 +66,40 @@ object Pink extends PinkBase {
   val evc_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e (lift e))) eval) e))"""
 }
 
+object Pink_CPS extends PinkBase {
+  val ev_poly_src = commonReplace("""
+(lambda _ maybe-lift (lambda _ eval (lambda _ exp (lambda _ env (lambda _ k
+  (if (num?                exp)    (k (maybe-lift exp))
+  (if (sym?                exp)    (k (env exp))
+  (if (sym?           (car exp))   
+    (if (eq?  '+      (car exp))   (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (+ v1 v2))))))
+    (if (eq?  '-      (car exp))   (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (- v1 v2))))))
+    (if (eq?  '*      (car exp))   (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (* v1 v2))))))
+    (if (eq?  'eq?    (car exp))   (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (eq? v1 v2))))))
+    (if (eq?  'if     (car exp))   (((eval (cadr exp)) env) (lambda _ c (if c (((eval (caddr exp)) env) k) (((eval (cadddr exp)) env) k))))
+    (if (eq?  'lambda (car exp))        (k (maybe-lift (lambda f x (maybe-lift ((eval (cadddr exp)) 
+      (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))))
+    (if (eq?  'let    (car exp))   (((eval (caddr exp)) env) (maybe-lift (lambda _ v (let x v (((eval (cadddr exp)) (lambda _ y (if (eq?  y (cadr exp)) x (env y)))) k)))))
+    (if (eq?  'lift   (car exp))   (((eval (cadr exp)) env) (lambda _ v (lift v)))
+    (if (eq?  'num?   (car exp))   (((eval (cadr exp)) env) (lambda _ v (num? v)))
+    (if (eq?  'sym?   (car exp))   (((eval (cadr exp)) env) (lambda _ v (sym? v)))
+    (if (eq?  'car    (car exp))   (((eval (cadr exp)) env) (lambda _ v (car v)))
+    (if (eq?  'cdr    (car exp))   (((eval (cadr exp)) env) (lambda _ v (cdr v)))
+    (if (eq?  'cons   (car exp))   (((eval (cadr exp)) env) (lambda _ a (((eval (caddr exp)) env) (lambda _ d (k (maybe-lift (cons a d)))))))
+    (if (eq?  'quote  (car exp))   (k (maybe-lift (cadr exp)))
+    (((eval (cadr exp)) env) (lambda _ v2 (((env (car exp)) v2) (maybe-lift (lambda _ x (k x))))))))))))))))))))
+  (((eval (car exp)) env) (lambda _ v1 (((eval (cadr exp)) env) (lambda _ v2 ((v1 v2) (maybe-lift (lambda _ x (k x))))))))))))))))
+""")
+
+  val ev_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e e)) eval) e))"""
+  val evc_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e (lift e))) eval) e))"""
+
+  override def test() = {
+    val r1 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) }
+    check(r1)("Cst(24)")
+  }
+}
+
 object Pink_clambda extends PinkBase {
   val ev_poly_src = commonReplace("""
 (lambda _ eval (lambda _ l (lambda _ exp (lambda _ env
