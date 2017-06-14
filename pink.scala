@@ -225,9 +225,13 @@ object Pink_macro extends PinkBase {
     val r2 = run { evalms(Nil, App(App(c2, Lit(4)),Lam(Var(1)))) }
     check(r2)("Cst(24)")
 
-    // macro test
+    // macro tests
     val v3 = parseExp("((macro _ e (car e)) 1)")
     val r3 = run { evalms(List(v3), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) }
-    //check(r3)("Cst(1)")
+    check(r3)("Cst(1)")
+
+    val v4 = parseExp("((macro _ e (car e)) (+ 1 0))")
+    val r4 = run { evalms(List(v4), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) }
+    check(r4)("Cst(1)")
   }
 }
