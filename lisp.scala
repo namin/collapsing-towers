@@ -224,15 +224,20 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
   // NOTE: have to be careful with 'equs': if arg is not a string, it might create a code object */
 
-  val Success(fac_val, _) = parseAll(exp, fac_src)
-  val Success(mut_val, _) = parseAll(exp, mut_src)
-  val Success(eval_val, _) = parseAll(exp, eval_src)
-  val Success(evalc_val, _) = parseAll(exp, evalc_src)
-  val Success(eval_vc_val, _) = parseAll(exp, eval_vc_src)
-  val Success(evalc_vc_val, _) = parseAll(exp, evalc_vc_src)
-  val Success(evalt_vc_val, _) = parseAll(exp, evalt_vc_src)
-  val Success(eval_cps_val, _) = parseAll(exp, eval_cps_src)
-  val Success(evalc_cps_val, _) = parseAll(exp, evalc_cps_src)
+  def parseExp(s: String) = {
+    val Success(v, _) = parseAll(exp, s)
+    v
+  }
+
+  val fac_val = parseExp(fac_src)
+  val mut_val = parseExp(mut_src)
+  val eval_val = parseExp(eval_src)
+  val evalc_val = parseExp(evalc_src)
+  val eval_vc_val = parseExp(eval_vc_src)
+  val evalc_vc_val = parseExp(evalc_vc_src)
+  val evalt_vc_val = parseExp(evalt_vc_src)
+  val eval_cps_val = parseExp(eval_cps_src)
+  val evalc_cps_val = parseExp(evalc_cps_src)
 
   val fac_exp = trans(fac_val,List("arg"))
   val mut_exp = trans(mut_val,List("arg"))
@@ -383,7 +388,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
     // generation + interpretation (small checks)
 
-    val Success(p11,_) = parseAll(exp, "(lambda f x (+ x 1))")
+    val p11 = parseExp("(lambda f x (+ x 1))")
     val c11 = reifyc { evalms(List(p11,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(pretty(c11, List()))("""
     |fun f0 x1 
@@ -391,7 +396,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     |    let x4 = (x1 + 1) in (x3 x4)
     """.stripMargin) // note: reusing the caller continuation
 
-    val Success(p12,_) = parseAll(exp, "(lambda f x (f x))")
+    val p12 = parseExp("(lambda f x (f x))")
     val c12 = reifyc { evalms(List(p12,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(pretty(c12, List()))("""
     |fun f0 x1 
@@ -401,7 +406,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     |      fun f5 x6 (x3 x6) in (x4 x5)
     """.stripMargin) // note: x3 eta-expanded into x5 (naive cps transform)
 
-    val Success(p13,_) = parseAll(exp, "(lambda f x (f (+ x 1)))")
+    val p13 = parseExp("(lambda f x (f (+ x 1)))")
     val c13 = reifyc { evalms(List(p13,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(pretty(c13, List()))("""
     |fun f0 x1 
@@ -412,7 +417,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     |      fun f6 x7 (x3 x7) in (x5 x6)
     """.stripMargin) // note: x3 eta-expanded into x6 (naive cps transform)
 
-    val Success(p14,_) = parseAll(exp, "(lambda f x (+ 1 (f x)))")
+    val p14 = parseExp("(lambda f x (+ 1 (f x)))")
     val c14 = reifyc { evalms(List(p14,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(pretty(c14, List()))("""
     |fun f0 x1 
@@ -423,7 +428,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     |        let x7 = (1 + x6) in (x3 x7) in (x4 x5)
     """.stripMargin)
 
-    val Success(p15,_) = parseAll(exp, "(let f (lambda f x (+ 1 x)) (f 3))")
+    val p15 = parseExp("(let f (lambda f x (+ 1 x)) (f 3))")
     val c15 = reifyc { evalms(List(p15,Cst(1)),App(App(App(evalc_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(pretty(c15, List()))("""
     |let x0 = 
@@ -458,11 +463,11 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
     check(r2)("Cst(24)")
 
     // call/cc
-    val Success(d3_val, _) = parseAll(exp, "(- (call/cc (lambda _ k 2)) 1)")
+    val d3_val = parseExp("(- (call/cc (lambda _ k 2)) 1)")
     val r3 = run { evalms(List(d3_val,Cst(0)), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r3)("Cst(1)")
 
-    val Success(d4_val, _) = parseAll(exp, "(- (call/cc (lambda _ k (* 3 (k 2)))) 1)")
+    val d4_val = parseExp("(- (call/cc (lambda _ k (* 3 (k 2)))) 1)")
     val r4 = run { evalms(List(d4_val,Cst(0)), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r4)("Cst(1)")
 
@@ -513,31 +518,31 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   def testEvalAmb() = {
     println("// ------- test eval CPS AMB --------")
 
-    val Success(b1,_) = parseAll(exp, "(begin 1)")
+    val b1 = parseExp("(begin 1)")
     val a1 = run { evalms(List(b1,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(a1)("Cst(1)")
 
-    val Success(b2,_) = parseAll(exp, "(begin 2)")
+    val b2 = parseExp("(begin 2)")
     val a2 = run { evalms(List(b2,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(a2)("Cst(2)")
 
-    val Success(p1,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'error)) (amb 1))")
+    val p1 = parseExp("(let amb-fail (refNew (lambda _ () 'error)) (amb 1))")
     val r1 = run { evalms(List(p1,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r1)("Cst(1)")
 
-    val Success(p2,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'error)) (amb (amb) 1))")
+    val p2 = parseExp("(let amb-fail (refNew (lambda _ () 'error)) (amb (amb) 1))")
     val r2 = run { evalms(List(p2,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r2)("Cst(1)")
 
-    val Success(p3,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'error)) (if (amb 0 1) 1 (amb)))")
+    val p3 = parseExp("(let amb-fail (refNew (lambda _ () 'error)) (if (amb 0 1) 1 (amb)))")
     val r3 = run { evalms(List(p3,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r3)("Cst(1)")
 
-    val Success(p4,_) = parseAll(exp, "(let amb-fail (refNew (lambda _ () 'error)) (let i (amb 1 2 3) (let j (amb 1 2 3) (if (- i j) (amb (+ i j)) (amb)))))")
+    val p4 = parseExp("(let amb-fail (refNew (lambda _ () 'error)) (let i (amb 1 2 3) (let j (amb 1 2 3) (if (- i j) (amb (+ i j)) (amb)))))")
     val r4 = run { evalms(List(p4,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(Var(3)))) }
     check(r4)("Cst(3)")
 
-    val Success(p5,_) = parseAll(exp, "(lambda _ x (let amb-fail (refNew (lambda _ () 'error)) (let i (amb x 2 3) (let j (amb 1 2 3) (if (- i j) (amb (+ i j)) (amb))))))")
+    val p5 = parseExp("(lambda _ x (let amb-fail (refNew (lambda _ () 'error)) (let i (amb x 2 3) (let j (amb 1 2 3) (if (- i j) (amb (+ i j)) (amb))))))")
     val r5 = run { evalms(List(p5,eval_cps_val), App(App(App(eval_cps_exp,Var(0)),Sym("nil-env")),Lam(App(App(Var(3),Lit(1)),Lam(Var(5)))))) }
     check(r5)("Cst(3)")
 
@@ -661,7 +666,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   def testDeltaEnv() = {
     println("// ------- test delta-env --------")
     val d_src = "(lambda _ n (delta-env (lambda _ env (+ (env 'n) 1))))"
-    val Success(d_val, _) = parseAll(exp, d_src)
+    val d_val = parseExp(d_src)
     val r1 = run { evalms(List(d_val,d_val),App(App(App(eval_exp,Var(0)),Sym("nil-env")),Lit(2))) }
     check(r1)("Cst(3)")
 
@@ -672,7 +677,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   def testDelta() = {
     println("// ------- test delta --------")
     val d_src = "((lambda _ c (lambda _ ev (lambda _ n ((lambda _ _ (refRead c)) (delta (+ n (+ n 1)) (lambda _ exp (lambda _ env (((ev c) exp) env)))))))) (refNew 0))"
-    val Success(d_val, _) = parseAll(exp, d_src)
+    val d_val = parseExp(d_src)
     val r1 = run { evalms(List(Tup(d_val,Tup(eval_vc_val, N)),d_val),App(App(App(eval_exp,Var(0)),Sym("nil-env")),Lit(0))) }
     check(r1)("Cst(2)")
 
@@ -722,7 +727,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
     def run(src: String) = {
       val prog_src = s"""(let exec-quote (lambda _ src (exec (trans-quote src))) $src)"""
-      val Success(prog_val, _) = parseAll(exp, prog_src)
+      val prog_val = parseExp(prog_src)
       val prog_exp = trans(prog_val,Nil)
       val res = reifyv(evalms(Nil,prog_exp))
       println(res)
@@ -869,7 +874,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 
     def run(src: String) = {
       val prog_src = s"""(let exec-quote (lambda _ src (exec (trans-quote src))) $src)"""
-      val Success(prog_val, _) = parseAll(exp, prog_src)
+      val prog_val = parseExp(prog_src)
       val prog_exp = trans(prog_val,Nil)
       val res = reifyv(evalms(Nil,prog_exp))
       println(res)
