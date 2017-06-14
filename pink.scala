@@ -1,8 +1,66 @@
-object Pink {
-  import Base._
-  import Lisp._
+import Base._
+import Lisp._
 
-  val ev_poly_src = """
+trait PinkBase {
+  def commonReplace(s: String) = s.
+    replace("num?", "isNum").
+    replace("sym?", "isStr").
+    replace("eq?", "equs").
+    replace("(cadr exp)","(car (cdr exp))").
+    replace("(caddr exp)","(car (cdr (cdr exp)))").
+    replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
+
+  val ev_src: String
+  lazy val ev_val = parseExp(ev_src)
+  lazy val ev_exp1 = trans(ev_val, List("arg1"))
+
+  val evc_src: String
+  lazy val evc_val = parseExp(evc_src)
+  lazy val evc_exp1 = trans(evc_val, List("arg1"))
+
+  def test() = {
+    val r1 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) }
+    check(r1)("Cst(24)")
+
+    val c1 = reifyc { evalms(List(fac_val),App(App(evc_exp1,Var(0)),Sym("nil-env"))) }
+    check(c1)(fac_exp_anf.toString)
+    val r2 = run { evalms(Nil,App(c1,Lit(4))) }
+    check(r2)("Cst(24)")
+  }
+}
+
+object Pink extends PinkBase {
+  val ev_poly_src = commonReplace("""
+(lambda _ maybe-lift (lambda _ eval (lambda _ exp (lambda _ env
+  (if (num?                exp)    (maybe-lift exp)
+  (if (sym?                exp)    (env exp)
+  (if (sym?           (car exp))   
+    (if (eq?  '+      (car exp))   (+   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+    (if (eq?  '-      (car exp))   (-   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+    (if (eq?  '*      (car exp))   (*   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+    (if (eq?  'eq?    (car exp))   (eq? ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+    (if (eq?  'if     (car exp))   (if  ((eval (cadr exp)) env) ((eval (caddr exp)) env) ((eval (cadddr exp)) env))
+    (if (eq?  'lambda (car exp))   (maybe-lift (lambda f x ((eval (cadddr exp)) 
+      (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
+    (if (eq?  'let    (car exp))   (let x ((eval (caddr exp)) env) ((eval (cadddr exp))
+      (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
+    (if (eq?  'lift   (car exp))   (lift ((eval (cadr exp)) env))
+    (if (eq?  'num?   (car exp))   (num? ((eval (cadr exp)) env))
+    (if (eq?  'sym?   (car exp))   (sym? ((eval (cadr exp)) env))
+    (if (eq?  'car    (car exp))   (car  ((eval (cadr exp)) env))
+    (if (eq?  'cdr    (car exp))   (cdr  ((eval (cadr exp)) env))
+    (if (eq?  'cons   (car exp))   (maybe-lift (cons ((eval (cadr exp)) env) ((eval (caddr exp)) env)))
+    (if (eq?  'quote  (car exp))   (maybe-lift (cadr exp))
+    ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))
+  (((eval (car exp)) env) ((eval (cadr exp)) env)))))))))
+""")
+
+  val ev_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e e)) eval) e))"""
+  val evc_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e (lift e))) eval) e))"""
+}
+
+object Pink_clambda extends PinkBase {
+  val ev_poly_src = commonReplace("""
 (lambda _ eval (lambda _ l (lambda _ exp (lambda _ env
   (if (num?                exp)    (l exp)
   (if (sym?                exp)    (env exp)
@@ -27,31 +85,14 @@ object Pink {
     (if (eq?  'quote  (car exp))   (l (cadr exp))
     ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
-""".
-    replace("num?", "isNum").
-    replace("sym?", "isStr").
-    replace("eq?", "equs").
-    replace("(cadr exp)","(car (cdr exp))").
-    replace("(caddr exp)","(car (cdr (cdr exp)))").
-    replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
+""")
 
   val ev_tie_src = s"""(lambda eval l (lambda _ e ((($ev_poly_src eval) l) e)))"""
   val ev_src = s"""($ev_tie_src (lambda _ e e))"""
-  val ev_val = parseExp(ev_src)
-  val ev_exp1 = trans(ev_val, List("arg1"))
   val evc_src = s"""($ev_tie_src (lambda _ e (lift e)))"""
-  val evc_val = parseExp(evc_src)
-  val evc_exp1 = trans(evc_val, List("arg1"))
 
-  def testPink() = {
-    println("Pink tests")
-    val r1 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) }
-    check(r1)("Cst(24)")
-
-    val c1 = reifyc { evalms(List(fac_val),App(App(evc_exp1,Var(0)),Sym("nil-env"))) }
-    check(c1)(fac_exp_anf.toString)
-    val r2 = run { evalms(Nil,App(c1,Lit(4))) }
-    check(r2)("Cst(24)")
+  override def test() = {
+    super.test()
 
     // Note:
     // Is this what we want for clambda? I'd expect something more fluid,

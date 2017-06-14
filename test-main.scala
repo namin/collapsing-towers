@@ -2,7 +2,6 @@ object TestMain {
   import Base._
   import Lisp._
   import Matches._
-  import Pink._
   def main(args: Array[String]) {
     testBasic()
     testAck1()
@@ -29,7 +28,8 @@ object TestMain {
     //benchFac()
     //TODO:benchMatches()
 
-    testPink()
+    Pink.test()
+    Pink_clambda.test()
   }
 
 }
