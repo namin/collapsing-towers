@@ -369,7 +369,7 @@ object Base {
     case _ => e.toString
   }
 
-  def check(a:Any)(s:String) = if (a.toString != s) {
+  def check(a:Any)(s:String) = if (a.toString.trim != s.trim) {
     println("error: expected ")
     println("    "+s)
     println("but got")

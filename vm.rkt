@@ -126,6 +126,21 @@
                   r)))))
     (helper e 0)))
 
+(define iter-eval-pp
+  (lambda (e)
+    (define (helper e i)
+      (if (= (modulo i 100) 0)
+          (begin (display e) (display "\n"))
+          'ok)
+      (let ((r (apply-reduction-relation red e)))
+        (let ((c (length r)))
+          (if (= 1 c)
+              (helper (car r) (+ i 1))
+              (if (= 0 c)
+                  e
+                  r)))))
+    (helper e 0)))
+
 (define acc-trace
   (lambda (e)
     (define (helper e a)
@@ -179,6 +194,29 @@
    ))))))))))))))))))))))))
 
 
+(define eva (lambda (l)
+  `(fix (lam ev (lam exp (lam env
+   (if (isLit exp) ,(l `exp)
+   (if (isStr exp) (app env exp)
+    (if (eq (str "quote") (car exp)) ,(l `(car (cdr exp)))
+    (if (eq (str "plus")  (car exp)) (plus  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+    (if (eq (str "minus") (car exp)) (minus (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+    (if (eq (str "times") (car exp)) (times (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+    (if (eq (str "eq")    (car exp)) (eq    (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+    (if (eq (str "if")    (car exp)) (if (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) env))
+    (if (eq (str "lam")   (car exp)) ,(l `(lam x (app (app ev (car (cdr (cdr exp)))) (lam y (if (eq y (car (cdr exp))) x (app env y))))))
+    (if (eq (str "let")   (car exp)) (let x (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) (lam y (if (eq y (car (cdr exp))) x (app env y)))))
+    (if (eq (str "fix")   (car exp)) (fix (app (app ev (car (cdr exp))) env))
+    (if (eq (str "lift")  (car exp)) (lift  (app (app ev (car (cdr exp))) env))
+    (if (eq (str "isLit") (car exp)) (isLit (app (app ev (car (cdr exp))) env))
+    (if (eq (str "isStr") (car exp)) (isStr (app (app ev (car (cdr exp))) env))
+    (if (eq (str "cons")  (car exp)) ,(l `(cons  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env)))
+    (if (eq (str "car")   (car exp)) (car (app (app ev (car (cdr exp))) env))
+    (if (eq (str "cdr")   (car exp)) (cdr (app (app ev (car (cdr exp))) env))
+    (if (eq (str "app")   (car exp)) (app (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
+   (str "error")
+   ))))))))))))))))))))))))
+
 (define ev (evl (lambda (x) `(app l ,x))))
 
 ;(pp-each (acc-trace (term (app (app (let l (lam x x) ,ev) (lit 3)) (lam y y)))))
@@ -197,6 +235,30 @@
        (times n (app fac (minus n ,(l `(lit 1)))))
        ,(l `(lit 1))))))))))
 
+(define o
+  (iter-eval `(app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (eva (lambda (x) x)))) (lam y y)))
+)
+
+(define fibl (lambda (l)
+  `(fix ,(l `(lam fib ,(l `(lam n
+   (if n
+       (if (minus n ,(l `(lit 1)))
+           ,(l `(lit 1))
+           (plus (app fib (minus n ,(l `(lit 1)))) (app fib (minus n ,(l `(lit 2))))))
+       ,(l `(lit 0))))))))))
+
+;(pp-each (acc-trace (term ,(fibl (lambda (x) `(lift ,x))))))
+;(length (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (fibl (lambda (x) x)))) (lam y y)))))
+;(define r (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (fibl (lambda (x) x)))) (lam y y)))))
+
+(define fl (lambda (l)
+  `(fix ,(l `(lam ev ,(l `(lam n ,(l `(lam _
+   (if n
+       (times n (app (app ev (minus n ,(l `(lit 1)))) ,(l `(lit 0))))
+       ,(l `(lit 1))))))))))))
+
+;(define r (acc-trace (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (fl (lambda (x) x)))) (lam y y)))))
+
 ;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify '(times (plus (lit 1) (lit 2)) (lit 4)))) (lam y y)))))
 ;(pp-fl (acc-trace (term (app (app (let l (lam x (lift x)) ,ev) ,(quotify '(times (plus (lit 1) (lit 2)) (lit 4)))) (lam y y)))))
 ;(pp-fl (acc-trace (term (app (app (let l (lam x x) ,ev) ,(quotify '(app (lam x (times x x)) (lit 3)))) (lam y y)))))
@@ -214,9 +276,9 @@
 ;                    (lit 3))))
 ;(pp-fl (acc-trace `(app (app
 ;,(second
-(define o
-  (iter-eval `(app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (evl (lambda (x) x)))) (lam y y)))
-)
+;(define o
+;  (iter-eval `(app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (evl (lambda (x) x)))) (lam y y)))
+;)
 ;)
 ;,(quotify '(app (lam x (plus x x)) (lit 3)))) (lam y y))))
 ;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify `(app (app ,(evl (lambda (x) x)) (lit 3)) (lam y y)))) (lam y y)))))
