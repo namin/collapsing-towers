@@ -19,13 +19,20 @@ trait PinkBase {
   lazy val evc_exp1 = trans(evc_val, List("arg1"))
 
   def test() = {
+    // interpretation of fac
     val r1 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) }
     check(r1)("Cst(24)")
 
-    val c1 = reifyc { evalms(List(fac_val),App(App(evc_exp1,Var(0)),Sym("nil-env"))) }
-    check(c1)(fac_exp_anf.toString)
-    val r2 = run { evalms(Nil,App(c1,Lit(4))) }
+    // compilation of fac
+    val c2 = reifyc { evalms(List(fac_val),App(App(evc_exp1,Var(0)),Sym("nil-env"))) }
+    check(c2)(fac_exp_anf.toString)
+    val r2 = run { evalms(Nil,App(c2,Lit(4))) }
     check(r2)("Cst(24)")
+
+    // self-compilation
+    val c3 = reifyc { evalms(List(ev_val),App(App(evc_exp1,Var(0)),Sym("nil-env"))) }
+    val r3 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) }
+    check(r3)("Cst(24)")
   }
 }
 
@@ -98,9 +105,9 @@ object Pink_clambda extends PinkBase {
     // Is this what we want for clambda? I'd expect something more fluid,
     // where compilation happens but then we can run it back in.
     val fc_val = parseExp(fac_src.replace("lambda", "clambda"))
-    val c2 = reifyc { evalms(List(fc_val),App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
-    check(c2)(fac_exp_anf.toString)
-    val r3 = run { evalms(Nil,App(c2,Lit(4))) }
-    check(r3)("Cst(24)")
+    val c1 = reifyc { evalms(List(fc_val),App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(c1)(fac_exp_anf.toString)
+    val r1 = run { evalms(Nil,App(c1,Lit(4))) }
+    check(r1)("Cst(24)")
   }
 }
