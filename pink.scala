@@ -3,28 +3,28 @@ object Pink {
   import Lisp._
 
   val ev_poly_src = """
-(lambda _ maybe-lift (lambda _ eval (lambda _ exp (lambda _ env
-  (if (num?                exp)    (maybe-lift exp)
+(lambda _ eval (lambda _ l (lambda _ exp (lambda _ env
+  (if (num?                exp)    (l exp)
   (if (sym?                exp)    (env exp)
   (if (sym?           (car exp))   
-    (if (eq?  '+      (car exp))   (+   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
-    (if (eq?  '-      (car exp))   (-   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
-    (if (eq?  '*      (car exp))   (*   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
-    (if (eq?  'eq?    (car exp))   (eq? ((eval (cadr exp)) env) ((eval (caddr exp)) env))
-    (if (eq?  'if     (car exp))   (if  ((eval (cadr exp)) env) ((eval (caddr exp)) env) ((eval (cadddr exp)) env))
-    (if (eq?  'lambda (car exp))   (maybe-lift (lambda f x ((eval (cadddr exp)) 
+    (if (eq?  '+      (car exp))   (+   (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  '-      (car exp))   (-   (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  '*      (car exp))   (*   (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  'eq?    (car exp))   (eq? (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  'if     (car exp))   (if  (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env) (((eval l) (cadddr exp)) env))
+    (if (eq?  'lambda (car exp))        (l (lambda f x (((eval l) (cadddr exp))
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
-    (if (eq?  'let    (car exp))   (let x ((eval (caddr exp)) env) ((eval (cadddr exp))
+    (if (eq?  'let    (car exp))   (let x (((eval l) (caddr exp)) env) (((eval l) (cadddr exp))
       (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
-    (if (eq?  'lift   (car exp))   (lift ((eval (cadr exp)) env))
-    (if (eq?  'num?   (car exp))   (num? ((eval (cadr exp)) env))
-    (if (eq?  'sym?   (car exp))   (sym? ((eval (cadr exp)) env))
-    (if (eq?  'car    (car exp))   (car  ((eval (cadr exp)) env))
-    (if (eq?  'cdr    (car exp))   (cdr  ((eval (cadr exp)) env))
-    (if (eq?  'cons   (car exp))   (maybe-lift (cons ((eval (cadr exp)) env) ((eval (caddr exp)) env)))
-    (if (eq?  'quote  (car exp))   (maybe-lift (cadr exp))
-    ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))
-  (((eval (car exp)) env) ((eval (cadr exp)) env)))))))))
+    (if (eq?  'lift   (car exp))   (lift (((eval l) (cadr exp)) env))
+    (if (eq?  'num?   (car exp))   (num? (((eval l) (cadr exp)) env))
+    (if (eq?  'sym?   (car exp))   (sym? (((eval l) (cadr exp)) env))
+    (if (eq?  'car    (car exp))   (car  (((eval l) (cadr exp)) env))
+    (if (eq?  'cdr    (car exp))   (cdr  (((eval l) (cadr exp)) env))
+    (if (eq?  'cons   (car exp))   (l (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
+    (if (eq?  'quote  (car exp))   (l (cadr exp))
+    ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))
+  ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """.
     replace("num?", "isNum").
     replace("sym?", "isStr").
@@ -33,11 +33,11 @@ object Pink {
     replace("(caddr exp)","(car (cdr (cdr exp)))").
     replace("(cadddr exp)","(car (cdr (cdr (cdr exp))))")
 
-  val ev_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e e)) eval) e))"""
+  val ev_tie_src = s"""(lambda eval l (lambda _ e ((($ev_poly_src eval) l) e)))"""
+  val ev_src = s"""($ev_tie_src (lambda _ e e))"""
   val ev_val = parseExp(ev_src)
   val ev_exp1 = trans(ev_val, List("arg1"))
-
-  val evc_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e (lift e))) eval) e))"""
+  val evc_src = s"""($ev_tie_src (lambda _ e (lift e)))"""
   val evc_val = parseExp(evc_src)
   val evc_exp1 = trans(evc_val, List("arg1"))
 
