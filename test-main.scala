@@ -2,6 +2,7 @@ object TestMain {
   import Base._
   import Lisp._
   import Matches._
+  import Pink._
   def main(args: Array[String]) {
     testBasic()
     testAck1()
@@ -22,11 +23,13 @@ object TestMain {
 
     //testUnstaging() // experimental
 
-    println("done with tests")
-    println("")
+    //println("done with tests")
+    //println("")
     //println("PINK BENCHMARKS")
     //benchFac()
     //TODO:benchMatches()
+
+    testPink()
   }
 
 }
