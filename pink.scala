@@ -80,14 +80,17 @@ object Pink_CPS extends PinkBase {
     (if (eq?  'lambda (car exp))        (k (maybe-lift (lambda f x (maybe-lift ((eval (cadddr exp)) 
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))))
     (if (eq?  'let    (car exp))   (((eval (caddr exp)) env) (maybe-lift (lambda _ v (let x v (((eval (cadddr exp)) (lambda _ y (if (eq?  y (cadr exp)) x (env y)))) k)))))
-    (if (eq?  'lift   (car exp))   (((eval (cadr exp)) env) (lambda _ v (lift v)))
-    (if (eq?  'num?   (car exp))   (((eval (cadr exp)) env) (lambda _ v (num? v)))
-    (if (eq?  'sym?   (car exp))   (((eval (cadr exp)) env) (lambda _ v (sym? v)))
-    (if (eq?  'car    (car exp))   (((eval (cadr exp)) env) (lambda _ v (car v)))
-    (if (eq?  'cdr    (car exp))   (((eval (cadr exp)) env) (lambda _ v (cdr v)))
+    (if (eq?  'lift   (car exp))   (((eval (cadr exp)) env) (lambda _ v (k (lift v))))
+    (if (eq?  'num?   (car exp))   (((eval (cadr exp)) env) (lambda _ v (k (num? v))))
+    (if (eq?  'sym?   (car exp))   (((eval (cadr exp)) env) (lambda _ v (k (sym? v))))
+    (if (eq?  'car    (car exp))   (((eval (cadr exp)) env) (lambda _ v (k (car v))))
+    (if (eq?  'cdr    (car exp))   (((eval (cadr exp)) env) (lambda _ v (k (cdr v))))
     (if (eq?  'cons   (car exp))   (((eval (cadr exp)) env) (lambda _ a (((eval (caddr exp)) env) (lambda _ d (k (maybe-lift (cons a d)))))))
     (if (eq?  'quote  (car exp))   (k (maybe-lift (cadr exp)))
-    (((eval (cadr exp)) env) (lambda _ v2 (((env (car exp)) v2) (maybe-lift (lambda _ x (k x))))))))))))))))))))
+    (if (eq? 'macro (car exp))     (k (maybe-lift (lambda f x (((eval (cadddr exp))
+      (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))
+      (lambda _ e (maybe-lift ((eval e) env)))))))
+    (((eval (cadr exp)) env) (lambda _ v2 (((env (car exp)) v2) (maybe-lift (lambda _ x (k x)))))))))))))))))))))
   (((eval (car exp)) env) (lambda _ v1 (((eval (cadr exp)) env) (lambda _ v2 ((v1 v2) (maybe-lift (lambda _ x (k x))))))))))))))))
 """)
 
@@ -104,6 +107,10 @@ object Pink_CPS extends PinkBase {
     val r2 = run { evalms(Nil, App(App(c2, Lit(4)),Lam(Var(1)))) }
     check(r2)("Cst(24)")
 
+    // test macro
+    val m3_val = parseExp(commonReplace("((macro f e (if (num? e) (+ e e) (f (car (cdr e))))) '(+ 2 3))"))
+    val r3 = run { evalms(List(m3_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) }
+    check(r3)("Cst(4)")
   }
 }
 
