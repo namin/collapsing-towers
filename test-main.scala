@@ -31,6 +31,7 @@ object TestMain {
     Pink.test()
     Pink_clambda.test()
     Pink_CPS.test()
+    Pink_macro.test()
   }
 
 }
