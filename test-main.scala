@@ -24,8 +24,8 @@ object TestMain {
 
     println("done with tests")
     println("")
-    println("PINK BENCHMARKS")
-    benchFac()
+    //println("PINK BENCHMARKS")
+    //benchFac()
     //TODO:benchMatches()
   }
 
