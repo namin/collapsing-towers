@@ -251,5 +251,34 @@ object Pink_macro extends PinkBase {
     val r5 = run { evalms(List(v5), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) }
     check(r5)("Cst(3)")
 
+    // amb as a macro
+    def amb_src(body: String) = commonReplace(s"""
+(let amb-fail (refNew (lambda _ () 'error))
+    (let amb (macro _ xs
+(cons 'let (cons 'prev-amb-fail (cons '(refRead amb-fail) (cons
+
+(cons 'call/cc (cons (cons 'lambda (cons '_ (cons 'sk
+(cons (cons 'begin
+(((lambda map f (lambda _ xs (if (if (isStr xs) (equs '. xs) 0)
+(cons '(prev-amb-fail 1) '.)
+(cons (f (car xs)) ((map f) (cdr xs))))))
+ (lambda _ alt (cons 'call/cc (cons (cons 'lambda (cons '_ (cons 'fk (cons (cons 'begin
+   (cons (cons 'refWrite (cons 'amb-fail
+(cons (cons 'lambda (cons '_ (cons '_ (cons (cons 'begin (cons '(refWrite amb-fail prev-amb-fail) (cons (cons 'fk (cons 0 '.)) '.))) '.)))) '.)))
+   (cons (cons 'sk (cons alt '.)) '.))) '.)))) '.)))) xs))'.)
+))) '.))
+
+
+'.)))))
+$body
+))""")
+    def all_amb(body: String) = begin_src(amb_src(body))
+    def test_amb(body: String, expected: String) = {
+      val v = parseExp(all_amb(body))
+      val r = run { evalms(List(v), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) }
+      check(r)(expected)
+    }
+    test_amb("(amb 1)", "Cst(1)")
+    test_amb("(amb (amb) (amb 1))", "Cst(1)")
   }
 }
