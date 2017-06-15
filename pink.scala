@@ -105,6 +105,12 @@ object Pink_CPS extends PinkBase {
     val c2 = reifyc { evalms(List(fac_val),App(App(App(evc_exp1,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
     val r2 = run { evalms(Nil, App(App(c2, Lit(4)),Lam(Var(1)))) }
     check(r2)("Cst(24)")
+
+    // self-compilation
+    // note that we are using the regular compiler first, not the CPS one... not sure why it does not work with the CPS one.
+    val c3 = reifyc { evalms(List(ev_val),App(App(Pink.evc_exp1,Var(0)),Sym("nil-env"))) }
+    val r3 = run { val v3 = evalms(Nil, c3); evalms(List(fac_val, v3), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
+    check(r3)("Cst(24)")
   }
 }
 
