@@ -60,7 +60,12 @@ object Pink extends PinkBase {
     (if (eq?  'cdr    (car exp))   (cdr  ((eval (cadr exp)) env))
     (if (eq?  'cons   (car exp))   (maybe-lift (cons ((eval (cadr exp)) env) ((eval (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   (maybe-lift (cadr exp))
-    ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))
+    (if (eq?  'pair?  (car exp))   (pair? ((eval (cadr exp)) env))
+    (if (eq?  'code?  (car exp))   (maybe-lift (code? ((eval (cadr exp)) env)))
+    (if (equs 'refNew (car exp))      (maybe-lift (refNew ((eval (cadr exp)) env)))
+    (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
+    (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+    ((env (car exp)) ((eval (cadr exp)) env)))))))))))))))))))))
   (((eval (car exp)) env) ((eval (cadr exp)) env)))))))))
 """)
 
@@ -287,4 +292,9 @@ $body
     test_amb("(amb 1)", "Cst(1)")
     test_amb("(amb (amb) (amb 1))", "Cst(1)")
   }
+
+  // self-compilation
+  val c3 = reifyc { evalms(List(ev_val),App(App(Pink.evc_exp1,Var(0)),Sym("nil-env"))) }
+  val r3 = run { val v3 = evalms(Nil, c3); evalms(List(fac_val, v3), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
+  check(r3)("Cst(24)")
 }
