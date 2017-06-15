@@ -301,8 +301,10 @@ $body
     val r7 = run { val v = evalms(Nil, c); evalms(List(v3, v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(Var(3)))) }
     check(r7)("Cst(1)")
 
-    // giving up for now...
-    //val r8 = run { val v = evalms(Nil, c); evalms(List(v5, v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(Var(3)))) }
-    //check(r8)("Cst(3)")
+    val r8 = run { val v = evalms(Nil, c); evalms(List(v5, v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(Var(3)))) }
+    check(r8)("Cst(3)")
+
+    val r9 = run { val v = evalms(Nil, c); evalms(List(parseExp(all_amb("(amb 1)")), v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(Var(3)))) }
+    check(r9)("Cst(1)")
   }
 }
