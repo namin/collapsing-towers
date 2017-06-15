@@ -112,10 +112,20 @@ object Pink_CPS extends PinkBase {
     check(r2)("Cst(24)")
 
     // self-compilation
-    // note that we are using the regular compiler first, not the CPS one... not sure why it does not work with the CPS one.
+    // note that we are using the regular compiler first, not the CPS one...
     val c3 = reifyc { evalms(List(ev_val),App(App(Pink.evc_exp1,Var(0)),Sym("nil-env"))) }
-    val r3 = run { val v3 = evalms(Nil, c3); evalms(List(fac_val, v3), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
+    val r3 = run { val v = evalms(Nil, c3); evalms(List(fac_val, v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
     check(r3)("Cst(24)")
+    // ... now the CPS one
+    val c4 = reifyc { evalms(List(ev_val), App(App(App(evc_exp1,Var(0)), Sym("nil-env")), Lam(Var(2)))) }
+    // ... but the evaluator got CPSed too!
+    // ... and it's super confusing!
+    val fac_app_src = s"($fac_src 4)"
+    val r4 = run { val v = evalms(Nil, c4); evalms(List(parseExp(fac_app_src), v), App(App(App(App(Var(1), Var(0)), Lam(App(App(Var(3), Sym("nil-env")),Lam(Var(5))))),
+      Lam(Lam(Var(3)))), // somehow we have to thunk the result
+      Lit(0))) // force the thunk
+    }
+    check(r4)("Cst(24)")
   }
 }
 
