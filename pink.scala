@@ -61,7 +61,7 @@ object Pink extends PinkBase {
     (if (eq?  'cons   (car exp))   (maybe-lift (cons ((eval (cadr exp)) env) ((eval (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   (maybe-lift (cadr exp))
     (if (eq?  'pair?  (car exp))   (pair? ((eval (cadr exp)) env))
-    (if (eq?  'code?  (car exp))   (maybe-lift (code? ((eval (cadr exp)) env)))
+    (if (eq?  'code?  (car exp))   (code? ((eval (cadr exp)) env) ((eval (caddr exp)) env))
     (if (equs 'refNew (car exp))      (maybe-lift (refNew ((eval (cadr exp)) env)))
     (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
     (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
@@ -167,8 +167,9 @@ object Pink_clambda extends PinkBase {
 
 object Pink_macro extends PinkBase {
   val ev_poly_src = commonReplace("""
+(let macro? (lambda _ v1 (if (code? 0 v1) 0 (if (pair? v1) (if (sym? (car v1)) (eq? 'macro (car v1)) 0) 0)))
+
 (lambda _ eval (lambda _ l (lambda _ exp (lambda _ env (lambda _ k
-(let macro? (lambda _ v1 (if (code? v1) 0 (if (pair? v1) (if (sym? (car v1)) (eq? 'macro (car v1)) 0) 0)))
 
 (let app (lambda _ _
 
@@ -297,6 +298,11 @@ $body
     val r6 = run { val v = evalms(Nil, c); evalms(List(fac_val, v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
     check(r6)("Cst(24)")
 
-    //val r7 = run { val v = evalms(Nil, c); evalms(List(parseExp(all_amb("(amb 1)")), v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(Var(3)))) }
+    val r7 = run { val v = evalms(Nil, c); evalms(List(v3, v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(Var(3)))) }
+    check(r7)("Cst(1)")
+
+    // giving up for now...
+    //val r8 = run { val v = evalms(Nil, c); evalms(List(v5, v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(Var(3)))) }
+    //check(r8)("Cst(3)")
   }
 }

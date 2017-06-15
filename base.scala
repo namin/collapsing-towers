@@ -20,7 +20,7 @@ object Base {
   case class IsNum(a:Exp) extends Exp
   case class IsStr(a:Exp) extends Exp
   case class IsPair(a:Exp) extends Exp
-  case class IsCode(a:Exp) extends Exp
+  case class IsCode(b:Exp,a:Exp) extends Exp
   case object Tic extends Exp
   case class RefNew(e:Exp) extends Exp
   case class RefRead(a:Exp) extends Exp
@@ -127,8 +127,8 @@ object Base {
       reflect(IsStr(anf(env,e)))
     case IsPair(e) =>
       reflect(IsPair(anf(env,e)))
-    case IsCode(e) =>
-      reflect(IsCode(anf(env,e)))
+    case IsCode(b, e) =>
+      reflect(IsCode(anf(env,b),anf(env,e)))
     case Fst(e) =>
       reflect(Fst(anf(env,e)))
     case Snd(e) =>
@@ -346,12 +346,15 @@ object Base {
           Cst(if (v.isInstanceOf[Tup]) 1 else 0)
       }
 
-    case IsCode(e1) =>
-      (evalms(env,e1)) match {
-        case (Code(s1)) =>
-          Cst(1)
-        case v => 
+    case IsCode(b,e1) =>
+      (evalms(env,b),evalms(env,e1)) match {
+        case (Code(b1),Code(s1)) =>
+          Code(reflect(IsCode(b1, s1)))
+        case (Code(b1), _) =>
+          assert(false) // shouldn't happen
           Cst(0)
+        case (_, r1) =>
+          Cst(if (r1.isInstanceOf[Code]) 1 else 0)
       }
 
     // special forms: custom eval, ...

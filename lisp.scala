@@ -60,7 +60,7 @@ object Lisp {
     case Tup(Str("isNum"),Tup(a,N)) => IsNum(trans(a,env))
     case Tup(Str("isStr"),Tup(a,N)) => IsStr(trans(a,env))
     case Tup(Str("isPair"),Tup(a,N)) => IsPair(trans(a,env))
-    case Tup(Str("isCode"),Tup(a,N)) => IsCode(trans(a,env))
+    case Tup(Str("isCode"),Tup(a,Tup(b,N))) => IsCode(trans(a,env),trans(b,env))
     case Tup(Str("cons"),Tup(a,Tup(b,N))) => Pair(trans(a,env),trans(b,env))
     case Tup(Str("car"),Tup(a,N)) => Fst(trans(a,env))
     case Tup(Str("cdr"),Tup(a,N)) => Snd(trans(a,env))
