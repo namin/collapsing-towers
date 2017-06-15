@@ -268,6 +268,8 @@ object Base {
           evalms(env3:+Clo(env3,e3):+v2,e3)
         case (Code(s1), Code(s2)) =>
           Code(reflect(App(s1,s2)))
+        case (r1, r2) =>
+          throw new Exception(s"wrong app: ${r1.toString} ${r2.getClass}")
       }
 
     case If(c,a,b) =>
