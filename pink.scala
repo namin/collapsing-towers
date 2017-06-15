@@ -33,7 +33,7 @@ trait PinkBase {
 
     // self-compilation
     val c3 = reifyc { evalms(List(ev_val),App(App(evc_exp1,Var(0)),Sym("nil-env"))) }
-    val r3 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) }
+    val r3 = run { val v3 = evalms(Nil, c3); evalms(List(fac_val, v3), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lit(4))) }
     check(r3)("Cst(24)")
   }
 }
