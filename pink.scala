@@ -126,6 +126,13 @@ object Pink_CPS extends PinkBase {
       Lit(0))) // force the thunk
     }
     check(r4)("Cst(24)")
+    val r5 = run { val v = evalms(Nil, c4); evalms(List(fac_val, v), App(App(App(App(App(App(Var(1), Var(0)), Lam(App(App(Var(3), Sym("nil-env")),Lam(Var(5))))),
+      Lam(App(Var(3),Lit(4)))),
+      Lam(Var(3))),
+      Lam(Lam(Var(3)))),
+      Lit(0)))
+    }
+    check(r5)("Cst(24)")
   }
 }
 
