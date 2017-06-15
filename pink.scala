@@ -291,10 +291,12 @@ $body
     }
     test_amb("(amb 1)", "Cst(1)")
     test_amb("(amb (amb) (amb 1))", "Cst(1)")
-  }
 
-  // self-compilation
-  val c3 = reifyc { evalms(List(ev_val),App(App(Pink.evc_exp1,Var(0)),Sym("nil-env"))) }
-  val r3 = run { val v3 = evalms(Nil, c3); evalms(List(fac_val, v3), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
-  check(r3)("Cst(24)")
+    // self-compilation
+    val c = reifyc { evalms(List(ev_val),App(App(Pink.evc_exp1,Var(0)),Sym("nil-env"))) }
+    val r6 = run { val v = evalms(Nil, c); evalms(List(fac_val, v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(App(App(Var(3),Lit(4)),Lam(Var(5)))))) }
+    check(r6)("Cst(24)")
+
+    //val r7 = run { val v = evalms(Nil, c); evalms(List(parseExp(all_amb("(amb 1)")), v), App(App(App(Var(1), Var(0)), Sym("nil-env")), Lam(Var(3)))) }
+  }
 }
