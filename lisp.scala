@@ -77,7 +77,17 @@ object Lisp {
     case Tup(Str("exec"),Tup(a,N)) => 
       def trace(x:Exp): Exp = { if (traceExec) println(">>> compile: " + pretty(x,Nil)); x }
       Special(benv => evalms(Nil, trace(reifyc(evalms(benv, trans(a,env))))))
-    case Tup(Str("trans-quote"),Tup(a,N)) => 
+    case Tup(Str("exec"),Tup(b,Tup(a,N))) =>
+      // Note: the only difference with Eval is that we use Nil instead of benv below
+      //   for second run.
+      def trace(x:Exp): Exp = { if (traceExec) println(">>> compile: " + pretty(x,Nil)); x }
+      def f(b: Exp, a: Exp): Special = Special(benv =>
+        evalms(benv, b) match {
+          case Code(b1) => reflectc(f(b1, reifyc(evalms(benv,a))))
+          case _ => evalms(Nil, trace(reifyc(evalms(benv, a))))
+        })
+      f(trans(b, env), trans(a, env))
+    case Tup(Str("trans-quote"),Tup(a,N)) =>
       Special(benv => Code(trans(evalms(benv, trans(a,env)), Nil)))
     // but EM needs a version that uses current env
     case Tup(Str("exec/env"),Tup(b,Tup(a,N))) => 

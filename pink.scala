@@ -149,18 +149,19 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'if     (car exp))   (if  (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env) (((eval l) (cadddr exp)) env))
     (if (eq?  'lambda (car exp))        (l (lambda f x (((eval l) (cadddr exp))
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
-    (if (eq?  'clambda (car exp))       ((lambda _ e (lift e)) (lambda f x (((eval (lambda _ e (lift e))) (cadddr exp))
-      (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
+    (if (eq?  'clambda (car exp))       (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp))) (lambda _ y y)))
     (if (eq?  'let    (car exp))   (let x (((eval l) (caddr exp)) env) (((eval l) (cadddr exp))
       (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
     (if (eq?  'lift   (car exp))   (lift (((eval l) (cadr exp)) env))
+    (if (eq? 'lift-ref (car exp))  (lift-ref (((eval l) (cadr exp)) env))
     (if (eq?  'num?   (car exp))   (num? (((eval l) (cadr exp)) env))
     (if (eq?  'sym?   (car exp))   (sym? (((eval l) (cadr exp)) env))
     (if (eq?  'car    (car exp))   (car  (((eval l) (cadr exp)) env))
     (if (eq?  'cdr    (car exp))   (cdr  (((eval l) (cadr exp)) env))
     (if (eq?  'cons   (car exp))   (l (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   (l (cadr exp))
-    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))
+    (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """)
 
@@ -171,14 +172,16 @@ object Pink_clambda extends PinkBase {
   override def test() = {
     super.test()
 
-    // Note:
-    // Is this what we want for clambda? I'd expect something more fluid,
-    // where compilation happens but then we can run it back in.
     val fc_val = parseExp(fac_src.replace("lambda", "clambda"))
-    val c1 = reifyc { evalms(List(fc_val),App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
-    check(c1)(fac_exp_anf.toString)
-    val r1 = run { evalms(Nil,App(c1,Lit(4))) }
+    val r1 = run { evalms(List(fc_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
     check(r1)("Cst(24)")
+    val c1 = (run { evalms(List(fc_val), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }).asInstanceOf[Clo]
+    check(c1.env)("List()")
+    check(pretty(c1.e, List("r", "n")))("""
+if (n) 
+  let x2 = (n - 1) in 
+  let x3 = (r x2) in (n * x3) 
+else 1""") // all interpretation overhead is gone
   }
 }
 
