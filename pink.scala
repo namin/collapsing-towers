@@ -150,6 +150,7 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'lambda (car exp))        (l (lambda f x (((eval l) (cadddr exp))
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
     (if (eq?  'clambda (car exp))       (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp))) env))
+    (if (eq?  'c2lambda (car exp))      (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp))) (lambda _ y (lift (env y)))))
     (if (eq?  'let    (car exp))   (let x (((eval l) (caddr exp)) env) (((eval l) (cadddr exp))
       (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
     (if (eq?  'lift   (car exp))   (lift (((eval l) (cadr exp)) env))
@@ -161,7 +162,7 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'cons   (car exp))   (l (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   (l (cadr exp))
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
-    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))
+    ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """)
 
@@ -186,6 +187,10 @@ else 1""") // all interpretation overhead is gone
     val closure_val = parseExp("(lambda _ x (clambda _ y (* (lift (+ x x)) y)))")
     val r2 = run { evalms(List(closure_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
     check(r2)("Cst(8)")
+
+    val closure2_val = parseExp("(lambda _ x (c2lambda _ y (* (+ x x) y)))")
+    val r3 = run { evalms(List(closure2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    check(r3)("Cst(8)")
   }
 }
 
