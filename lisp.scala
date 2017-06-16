@@ -121,7 +121,7 @@ object Lisp {
       (if (equs 'cdr    (car exp))      (cdr ((eval (cadr exp)) env))
       (if (equs 'quote  (car exp))      (maybe-lift (cadr exp))
       (if (equs 'EM     (car exp))      'em-not-supported
-      (if (equs 'exec/env (car exp))    (equs ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+      (if (equs 'exec/env (car exp))    (exec/env ((eval (cadr exp)) env) ((eval (caddr exp)) env))
       (if (equs 'refNew (car exp))      (maybe-lift (refNew ((eval (cadr exp)) env)))
       (if (equs 'refRead (car exp))     (refRead ((eval (cadr exp)) env))
       (if (equs 'refWrite (car exp))    (refWrite ((eval (cadr exp)) env) ((eval (caddr exp)) env))
