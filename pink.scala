@@ -149,7 +149,7 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'if     (car exp))   (if  (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env) (((eval l) (cadddr exp)) env))
     (if (eq?  'lambda (car exp))        (l (lambda f x (((eval l) (cadddr exp))
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
-    (if (eq?  'clambda (car exp))       (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp))) (lambda _ y y)))
+    (if (eq?  'clambda (car exp))       (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp))) env))
     (if (eq?  'let    (car exp))   (let x (((eval l) (caddr exp)) env) (((eval l) (cadddr exp))
       (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
     (if (eq?  'lift   (car exp))   (lift (((eval l) (cadr exp)) env))
@@ -182,6 +182,10 @@ if (n)
   let x2 = (n - 1) in 
   let x3 = (r x2) in (n * x3) 
 else 1""") // all interpretation overhead is gone
+
+    val closure_val = parseExp("(lambda _ x (clambda _ y (* (lift (+ x x)) y)))")
+    val r2 = run { evalms(List(closure_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    check(r2)("Cst(8)")
   }
 }
 
