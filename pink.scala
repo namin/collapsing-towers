@@ -191,6 +191,14 @@ else 1""") // all interpretation overhead is gone
     val closure2_val = parseExp("(lambda _ x (c2lambda _ y (* (+ x x) y)))")
     val r3 = run { evalms(List(closure2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
     check(r3)("Cst(8)")
+
+    val poly_val = parseExp("(lambda _ x (clambda _ y (lambda _ l (* (l (lift (+ x x))) (l y)))))")
+    val r4 = run { evalms(List(poly_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) }
+    val c4 = (run { evalms(List(poly_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1))) }).asInstanceOf[Clo]
+    //println(pretty(c4.e, List("r", "y"))) // looks good
+    check(r4)("Cst(8)")
+    val c5 = reifyc { evalms(List(poly_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
+    //println(c5) // looks good
   }
 }
 
