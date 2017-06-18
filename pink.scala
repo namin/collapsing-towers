@@ -161,13 +161,18 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'cons   (car exp))   (l (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   (l (cadr exp))
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
-    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))
+    (if (eq?  'scope (car exp))    (let ev (((eval l) (cadr exp)) env) (((ev l) (caddr exp)) env))
+    (if (eq?  'log    (car exp))   (l (log (((eval l) (cadr exp)) env)))
+    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """)
 
   val ev_tie_src = s"""(lambda eval l (lambda _ e ((($ev_poly_src eval) l) e)))"""
   val ev_src = s"""($ev_tie_src (lambda _ e e))"""
   val evc_src = s"""($ev_tie_src (lambda _ e (lift e)))"""
+
+  val ev_log_src = commonReplace(ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log (env exp)) (env exp))"))
+
 
   override def test() = {
     super.test()
@@ -198,6 +203,11 @@ else 1""") // all interpretation overhead is gone
     check(r4)("Cst(8)")
     val c5 = reifyc { evalms(List(poly_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
     //println(c5) // looks good
+
+    // test log and scope
+    // run { evalms(List(parseExp("(log 1)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
+    // run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ x x) 1))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
+    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n n) 1))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
   }
 }
 
