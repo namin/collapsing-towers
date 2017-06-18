@@ -151,6 +151,7 @@ object Pink_clambda extends PinkBase {
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
     (if (eq?  'clambda (car exp))       (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp))) env))
     (if (eq?  'c2lambda (car exp))      (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp))) (lambda _ y (lift (env y)))))
+    (if (eq?  'cllambda (car exp))       (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp))) (lift-ref (lambda _ y (env y)))))
     (if (eq?  'let    (car exp))   (let x (((eval l) (caddr exp)) env) (((eval l) (cadddr exp))
       (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
     (if (eq?  'lift   (car exp))   (lift (((eval l) (cadr exp)) env))
@@ -162,7 +163,7 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'cons   (car exp))   (l (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   (l (cadr exp))
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
-    ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))
+    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """)
 
@@ -196,6 +197,14 @@ else 1""") // all interpretation overhead is gone
     val r6 = run { evalms(List(closure6_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
     check(r6)("Cst(5)")
 
+ /*
+I get [error] (run-main-2) java.lang.Exception: wrong app: Code(Special(<function1>)) class Base$Str
+java.lang.Exception: wrong app: Code(Special(<function1>)) class Base$Str
+
+    val closure7_val = parseExp("(let inc (lambda _ x (+ x 1)) (cllambda _ y (inc y)))")
+    val r7 = run { evalms(List(closure7_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
+    check(r7)("Cst(5)")
+ */
     val poly_val = parseExp("(lambda _ x (clambda _ y (lambda _ l (* (l (lift (+ x x))) (l y)))))")
     val r4 = run { evalms(List(poly_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) }
     val c4 = (run { evalms(List(poly_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1))) }).asInstanceOf[Clo]
