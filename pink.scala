@@ -162,7 +162,7 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'quote  (car exp))   (l (cadr exp))
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'scope (car exp))    (let ev (((eval l) (cadr exp)) env) (((ev l) (caddr exp)) env))
-    (if (eq?  'log    (car exp))   (l (log (((eval l) (cadr exp)) env)))
+    (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env))
     ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """)
@@ -208,10 +208,8 @@ else 1""") // all interpretation overhead is gone
     run { evalms(List(parseExp("(log 1)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ x x) 2))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n n) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
-    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n (+ n n)) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) } // this prints 3 twice
-    //TODO: recursive functions lose the scope!
-    run { evalms(List(parseExp(s"(scope $ev_log_src ($fac_src 4))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) } // hmm, this only prints 4 :(
-    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda f n (if n (+ 1 (f (- n 1))) n)) 5))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) } // this prints only 5 twice :(
+    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n (+ n n)) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
+    run { evalms(List(parseExp(s"(scope $ev_log_src ($fac_src 4))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     println("-- END pink logging")
 
   }

@@ -75,7 +75,7 @@ object Lisp {
     case Tup(Str("refWrite"),Tup(a,Tup(e,N))) => RefWrite(trans(a,env),trans(e,env))
     case Tup(Str("log"),Tup(a,N)) => def log(e: Exp): Special = Special{benv => evalms(benv,e) match {
       case Code(e) => reflectc(log(e))
-      case v => println(v.toString); Cst(0)
+      case v => println(v.toString); v
     }}
     log(trans(a,env))
     // special forms: eval / trans assume empty env for now
