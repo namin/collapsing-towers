@@ -204,12 +204,15 @@ else 1""") // all interpretation overhead is gone
     val c5 = reifyc { evalms(List(poly_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
     //println(c5) // looks good
 
-    println("-- BEGIN test log and scope")
+    println("-- BEGIN pink logging")
     run { evalms(List(parseExp("(log 1)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ x x) 2))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n n) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
-    println("-- END test log and scope")
-
+    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n (+ n n)) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) } // this prints 3 twice
+    //TODO: recursive functions lose the scope!
+    run { evalms(List(parseExp(s"(scope $ev_log_src ($fac_src 4))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) } // hmm, this only prints 4 :(
+    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda f n (if n (+ 1 (f (- n 1))) n)) 5))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) } // this prints only 5 twice :(
+    println("-- END pink logging")
 
   }
 }
