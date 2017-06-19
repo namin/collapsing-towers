@@ -161,7 +161,7 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'cons   (car exp))   ((car l) (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   ((car l) (cadr exp))
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
-    (if (eq?  'scope (car exp))    (let ev (((eval l) (cadr exp)) env) (((ev l) (caddr exp)) env))
+    (if (eq?  'scope (car exp))    (let ev (((eval (cons (lambda _ e e) 0)) (cadr exp)) env) (((ev l) (caddr exp)) env))
     (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env))
     ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
@@ -236,9 +236,15 @@ else 1""") // all interpretation overhead is gone
     println("compiled fac:")
     println(pretty(c_fac.e, List("r", "n")))
 
-    // note: cannot change lambda to clambda
-    val r10 = run { evalms(List(parseExp(s"(lambda _ _ (scope $ev_log_src 1))")), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
-    check(r10)("Cst(1)")
+    val c_1 = run { evalms(List(parseExp(s"(clambda _ _ (scope $ev_log_src 1))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
+    check(c_1.env)("List()")
+    println("compiled constant fun:")
+    println(pretty(c_1.e, List("r", "n")))
+
+    val c_id = run { evalms(List(parseExp(s"(clambda _ n (scope $ev_log_src n))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
+    check(c_id.env)("List()")
+    println("compiled id fun, with tracing:")
+    println(pretty(c_id.e, List("r", "n")))
 
     println("-- END pink clambda")
   } finally { traceExec = oldTrace }
