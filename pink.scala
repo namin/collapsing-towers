@@ -138,7 +138,7 @@ object Pink_CPS extends PinkBase {
 
 object Pink_clambda extends PinkBase {
   val ev_poly_src = commonReplace("""
-(lambda _ eval (lambda _ l (lambda _ exp (lambda _ env
+(lambda tie eval (lambda _ l (lambda _ exp (lambda _ env
   (if (num?                exp)    ((car l) exp)
   (if (sym?                exp)    (env exp)
   (if (sym?           (car exp))   
@@ -162,27 +162,19 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'quote  (car exp))   ((car l) (cadr exp))
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'scope (car exp))    (let ev (((eval (cons (lambda _ e e) 0)) (cadr exp)) env) (((ev l) (caddr exp)) env))
+    (if (eq?  'open  (car exp))    (let ev (((eval (cons (lambda _ e e) 0)) (cadr exp)) env) ((((ev tie) l) (caddr exp)) env))
     (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env))
-    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))))
+    ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """)
 
   val ev_tie_src = s"""(lambda eval l (lambda _ e ((($ev_poly_src eval) l) e)))"""
   val ev_src = s"""($ev_tie_src (cons (lambda _ e e) 0))"""
   val evc_src = s"""($ev_tie_src (cons (lambda _ e (lift e)) 1))"""
+  val fc_src = fac_src.replace("lambda", "clambda")
+  val fc_val = parseExp(fc_src)
 
-  val ev_log_src = commonReplace(ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log (env exp)) (env exp))"))
-
-
-  override def test() = {
-    super.test()
-    println("-- BEGIN pink clambda")
-    val oldTrace = traceExec
-    try {
-    traceExec = true
-
-    val fc_src = fac_src.replace("lambda", "clambda")
-    val fc_val = parseExp(fc_src)
+  def test_clambda() = {
     val r1 = run { evalms(List(fc_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
     check(r1)("Cst(24)")
     val c1 = (run { evalms(List(fc_val), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }).asInstanceOf[Clo]
@@ -219,35 +211,60 @@ else 1""") // all interpretation overhead is gone
     check(r6)("Cst(8)")
     val c7 = reifyc { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
     println(c7)
+  }
 
+  def test_log() {
     run { evalms(List(parseExp("(log 1)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
-    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ x x) 2))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
-    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n n) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
-    run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n (+ n n)) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
-    run { evalms(List(parseExp(s"(scope $ev_log_src ($fac_src 4))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
+  }
 
-    val c_inc = run { evalms(List(parseExp(s"(scope $ev_log_src (clambda _ n (+ n 1)))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
+  def test_scope() {
+    val ev_log_src = commonReplace(ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log (env exp)) (env exp))"))
+    testMeta(s"scope $ev_log_src")
+  }
+
+  def test_open() {
+
+  }
+
+  def testMeta(s: String) {
+    run { evalms(List(parseExp(s"($s ((lambda _ x x) 2))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
+    run { evalms(List(parseExp(s"($s ((lambda _ n n) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
+    run { evalms(List(parseExp(s"($s ((lambda _ n (+ n n)) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
+    run { evalms(List(parseExp(s"($s ($fac_src 4))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
+
+    val c_inc = run { evalms(List(parseExp(s"($s (clambda _ n (+ n 1)))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
     check(c_inc.env)("List()")
     println("compiled inc:")
     println(pretty(c_inc.e, List("r", "n")))
 
-    val c_fac = run { evalms(List(parseExp(s"(scope $ev_log_src $fc_src)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
+    val c_fac = run { evalms(List(parseExp(s"($s $fc_src)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
     check(c_fac.env)("List()")
     println("compiled fac:")
     println(pretty(c_fac.e, List("r", "n")))
 
-    val c_1 = run { evalms(List(parseExp(s"(clambda _ _ (scope $ev_log_src 1))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
+    val c_1 = run { evalms(List(parseExp(s"(clambda _ _ ($s 1))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
     check(c_1.env)("List()")
     println("compiled constant fun:")
     println(pretty(c_1.e, List("r", "n")))
 
-    val c_id = run { evalms(List(parseExp(s"(clambda _ n (scope $ev_log_src n))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
+    val c_id = run { evalms(List(parseExp(s"(clambda _ n ($s n))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
     check(c_id.env)("List()")
     println("compiled id fun, with tracing:")
     println(pretty(c_id.e, List("r", "n")))
+  }
 
-    println("-- END pink clambda")
-  } finally { traceExec = oldTrace }
+  override def test() = {
+    super.test()
+    println("-- BEGIN pink clambda")
+    val oldTrace = traceExec
+    try {
+      traceExec = true
+      test_clambda()
+      test_log()
+      test_scope()
+      test_open()
+      println("-- END pink clambda")
+    } finally { traceExec = oldTrace }
   }
 }
 
