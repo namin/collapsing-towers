@@ -139,7 +139,7 @@ object Pink_CPS extends PinkBase {
 object Pink_clambda extends PinkBase {
   val ev_poly_src = commonReplace("""
 (lambda _ eval (lambda _ l (lambda _ exp (lambda _ env
-  (if (num?                exp)    (l exp)
+  (if (num?                exp)    ((car l) exp)
   (if (sym?                exp)    (env exp)
   (if (sym?           (car exp))   
     (if (eq?  '+      (car exp))   (+   (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
@@ -147,9 +147,9 @@ object Pink_clambda extends PinkBase {
     (if (eq?  '*      (car exp))   (*   (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'eq?    (car exp))   (eq? (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'if     (car exp))   (if  (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env) (((eval l) (cadddr exp)) env))
-    (if (eq?  'lambda (car exp))        (l (lambda f x (((eval l) (cadddr exp))
+    (if (if (eq? 'lambda (car exp)) 1 (if (eq? 'clambda (car exp)) (cdr l) 0)) ((car l) (lambda f x (((eval l) (cadddr exp))
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
-    (if (eq?  'clambda (car exp))       (exec 0 (((eval (lambda _ e (lift e))) (cons 'lambda (cdr exp)))  (lambda _ y (lift-ref (env y)))))
+    (if (eq? 'clambda (car exp))       (exec 0 (((eval (cons (lambda _ e (lift e)) 1)) (cons 'lambda (cdr exp)))  (lambda _ y (lift-ref (env y)))))
     (if (eq?  'let    (car exp))   (let x (((eval l) (caddr exp)) env) (((eval l) (cadddr exp))
       (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
     (if (eq?  'lift   (car exp))   (lift (((eval l) (cadr exp)) env))
@@ -158,8 +158,8 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'sym?   (car exp))   (sym? (((eval l) (cadr exp)) env))
     (if (eq?  'car    (car exp))   (car  (((eval l) (cadr exp)) env))
     (if (eq?  'cdr    (car exp))   (cdr  (((eval l) (cadr exp)) env))
-    (if (eq?  'cons   (car exp))   (l (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
-    (if (eq?  'quote  (car exp))   (l (cadr exp))
+    (if (eq?  'cons   (car exp))   ((car l) (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
+    (if (eq?  'quote  (car exp))   ((car l) (cadr exp))
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'scope (car exp))    (let ev (((eval l) (cadr exp)) env) (((ev l) (caddr exp)) env))
     (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env))
@@ -168,8 +168,8 @@ object Pink_clambda extends PinkBase {
 """)
 
   val ev_tie_src = s"""(lambda eval l (lambda _ e ((($ev_poly_src eval) l) e)))"""
-  val ev_src = s"""($ev_tie_src (lambda _ e e))"""
-  val evc_src = s"""($ev_tie_src (lambda _ e (lift e)))"""
+  val ev_src = s"""($ev_tie_src (cons (lambda _ e e) 0))"""
+  val evc_src = s"""($ev_tie_src (cons (lambda _ e (lift e)) 1))"""
 
   val ev_log_src = commonReplace(ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log (env exp)) (env exp))"))
 
@@ -177,6 +177,9 @@ object Pink_clambda extends PinkBase {
   override def test() = {
     super.test()
     println("-- BEGIN pink clambda")
+    val oldTrace = traceExec
+    try {
+    traceExec = true
 
     val fc_src = fac_src.replace("lambda", "clambda")
     val fc_val = parseExp(fc_src)
@@ -190,9 +193,20 @@ if (n)
   let x3 = (r x2) in (n * x3) 
 else 1""") // all interpretation overhead is gone
 
+    println("closure 1")
     val closure_val = parseExp("(lambda _ x (clambda _ y (* (+ x x) y)))")
     val r2 = run { evalms(List(closure_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
     check(r2)("Cst(8)")
+
+    println("closure 2")
+    val closure2_val = parseExp("(clambda _ x (lambda _ y (* (+ x x) y)))")
+    val r3 = run { evalms(List(closure2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    check(r3)("Cst(8)")
+
+    println("closure 3")
+    val closure3_val = parseExp("(clambda _ x (clambda _ y (* (+ x x) y)))")
+    val r5 = run { evalms(List(closure3_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    check(r5)("Cst(8)")
 
     val closure7_val = parseExp("(let inc (lambda _ x (+ x 1)) (clambda _ y (inc y)))")
     val r7 = run { evalms(List(closure7_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
@@ -227,6 +241,7 @@ else 1""") // all interpretation overhead is gone
     check(r10)("Cst(1)")
 
     println("-- END pink clambda")
+  } finally { traceExec = oldTrace }
   }
 }
 
