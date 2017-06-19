@@ -193,32 +193,32 @@ if (n)
   let x3 = (r x2) in (n * x3) 
 else 1""") // all interpretation overhead is gone
 
-    println("closure 1")
-    val closure_val = parseExp("(lambda _ x (clambda _ y (* (+ x x) y)))")
-    val r2 = run { evalms(List(closure_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    println("closure 2")
+    val c2_val = parseExp("(lambda _ x (clambda _ y (* (+ x x) y)))")
+    val r2 = run { evalms(List(c2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
     check(r2)("Cst(8)")
 
-    println("closure 2")
-    val closure2_val = parseExp("(clambda _ x (lambda _ y (* (+ x x) y)))")
-    val r3 = run { evalms(List(closure2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    println("closure 3")
+    val c3_val = parseExp("(clambda _ x (lambda _ y (* (+ x x) y)))")
+    val r3 = run { evalms(List(c3_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
     check(r3)("Cst(8)")
 
-    println("closure 3")
-    val closure3_val = parseExp("(clambda _ x (clambda _ y (* (+ x x) y)))")
-    val r5 = run { evalms(List(closure3_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
-    check(r5)("Cst(8)")
-
-    val closure7_val = parseExp("(let inc (lambda _ x (+ x 1)) (clambda _ y (inc y)))")
-    val r7 = run { evalms(List(closure7_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
-    check(r7)("Cst(5)")
-
-    val poly_val = parseExp("(lambda _ x (clambda _ y (lambda _ l (* (l (+ x x)) (l y)))))")
-    val r4 = run { evalms(List(poly_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) }
-    val c4 = (run { evalms(List(poly_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1))) }).asInstanceOf[Clo]
-    //println(pretty(c4.e, List("r", "y"))) // looks good
+    println("closure 4")
+    val c4_val = parseExp("(clambda _ x (clambda _ y (* (+ x x) y)))")
+    val r4 = run { evalms(List(c4_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
     check(r4)("Cst(8)")
-    val c5 = reifyc { evalms(List(poly_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
-    //println(c5) // looks good
+
+    val c5_val = parseExp("(let inc (lambda _ x (+ x 1)) (clambda _ y (inc y)))")
+    val r5 = run { evalms(List(c5_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
+    check(r5)("Cst(5)")
+
+    val c6_val = parseExp("(lambda _ x (clambda _ y (lambda _ l (* (l (+ x x)) (l y)))))")
+    val r6 = run { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) }
+    val c6 = (run { evalms(List(c6_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1))) }).asInstanceOf[Clo]
+    println(pretty(c6.e, List("r", "y")))
+    check(r6)("Cst(8)")
+    val c7 = reifyc { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
+    println(c7)
 
     run { evalms(List(parseExp("(log 1)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ x x) 2))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
