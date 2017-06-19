@@ -176,6 +176,7 @@ object Pink_clambda extends PinkBase {
 
   override def test() = {
     super.test()
+    println("-- BEGIN pink clambda")
 
     val fc_src = fac_src.replace("lambda", "clambda")
     val fc_val = parseExp(fc_src)
@@ -205,7 +206,6 @@ else 1""") // all interpretation overhead is gone
     val c5 = reifyc { evalms(List(poly_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
     //println(c5) // looks good
 
-    println("-- BEGIN pink logging")
     run { evalms(List(parseExp("(log 1)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ x x) 2))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n n) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
@@ -221,6 +221,12 @@ else 1""") // all interpretation overhead is gone
     check(c_fac.env)("List()")
     println("compiled fac:")
     println(pretty(c_fac.e, List("r", "n")))
+
+    // note: cannot change lambda to clambda
+    val r10 = run { evalms(List(parseExp(s"(lambda _ _ (scope $ev_log_src 1))")), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
+    check(r10)("Cst(1)")
+
+    println("-- END pink clambda")
   }
 }
 
