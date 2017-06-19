@@ -3,22 +3,22 @@ object TestMain {
   import Lisp._
   import Matches._
   def main(args: Array[String]) {
-    //testBasic()
-    //testAck1()
-    //testAck2()
+    testBasic()
+    testAck1()
+    testAck2()
 
-    //testFac1()
-    //testEval()
-    //testEvalCps()
-    //testEvalAmb()
-    //testDeltaEnv()
-    //testDelta()
+    testFac1()
+    testEval()
+    testEvalCps()
+    testEvalAmb()
+    testDeltaEnv()
+    testDelta()
     //testMutEval()
     //testMutInEval()
-    //testEvalSyntax()
+    testEvalSyntax()
 
-    //testMatches()
-    //testMatchesBis()
+    testMatches()
+    testMatchesBis()
 
     //testUnstaging() // experimental
 
