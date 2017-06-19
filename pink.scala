@@ -162,7 +162,7 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'quote  (car exp))   ((car l) (cadr exp))
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'scope (car exp))    (let ev (((eval (cons (lambda _ e e) 0)) (cadr exp)) env) (((ev l) (caddr exp)) env))
-    (if (eq?  'open  (car exp))    (let ev (((eval (cons (lambda _ e e) 0)) (cadr exp)) env) ((((ev tie) l) (caddr exp)) env))
+    (if (eq?  'open  (car exp))    (let ev (((eval (cons (lambda _ e e) 0)) (cadr exp)) env) (((((ev tie) eval) l) (caddr exp)) env))
     (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env))
     ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
@@ -218,12 +218,21 @@ else 1""") // all interpretation overhead is gone
   }
 
   def test_scope() {
+    println("begin test_scope")
     val ev_log_src = commonReplace(ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log (env exp)) (env exp))"))
     testMeta(s"scope $ev_log_src")
+    println("end test_scope")
   }
 
   def test_open() {
+    println("test_open")
+    testMeta(commonReplace("""open (lambda _ tie (lambda _ eval (lambda ev l (lambda _ exp (lambda _ env
 
+(if (if (sym? exp) (eq? 'n exp) 0) (log (((eval l) exp) env))
+((((tie ev) l) exp) env))
+
+)))))"""))
+    println("end test_open")
   }
 
   def testMeta(s: String) {
