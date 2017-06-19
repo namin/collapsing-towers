@@ -177,7 +177,8 @@ object Pink_clambda extends PinkBase {
   override def test() = {
     super.test()
 
-    val fc_val = parseExp(fac_src.replace("lambda", "clambda"))
+    val fc_src = fac_src.replace("lambda", "clambda")
+    val fc_val = parseExp(fc_src)
     val r1 = run { evalms(List(fc_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
     check(r1)("Cst(24)")
     val c1 = (run { evalms(List(fc_val), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }).asInstanceOf[Clo]
@@ -210,8 +211,16 @@ else 1""") // all interpretation overhead is gone
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n n) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ((lambda _ n (+ n n)) 3))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
     run { evalms(List(parseExp(s"(scope $ev_log_src ($fac_src 4))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
-    println("-- END pink logging")
 
+    val c_inc = run { evalms(List(parseExp(s"(scope $ev_log_src (clambda _ n (+ n 1)))")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
+    check(c_inc.env)("List()")
+    println("compiled inc:")
+    println(pretty(c_inc.e, List("r", "n")))
+
+    val c_fac = run { evalms(List(parseExp(s"(scope $ev_log_src $fc_src)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }.asInstanceOf[Clo]
+    check(c_fac.env)("List()")
+    println("compiled fac:")
+    println(pretty(c_fac.e, List("r", "n")))
   }
 }
 
