@@ -44,7 +44,7 @@ object TestMain {
     Pink.test()
     Pink_clambda.test()
     Pink_CPS.test()
-    // disable Pink_macro by default because they requrie stack
+    // disable Pink_macro by default because they require stack
     //Pink_macro.test()
   }
 }
