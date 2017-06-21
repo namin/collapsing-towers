@@ -235,9 +235,9 @@
        (times n (app fac (minus n ,(l `(lit 1)))))
        ,(l `(lit 1))))))))))
 
-(define o
-  (iter-eval `(app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (eva (lambda (x) x)))) (lam y y)))
-)
+;(define o
+;  (iter-eval `(app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (eva (lambda (x) x)))) (lam y y)))
+;)
 
 (define fibl (lambda (l)
   `(fix ,(l `(lam fib ,(l `(lam n
