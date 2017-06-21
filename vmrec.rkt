@@ -72,9 +72,10 @@
    (--> (in-hole M (run (code e_1) (code e_2)))
         (in-hole M (reflect (code (run e_1 e_2))))                        "runcc")
    (--> (in-hole M (run v_1 (code e_2)))
-        (in-hole M (app (lam x_new e_2) v_1))                             "runnc"
+        (in-hole M (app (lam f_new x_new e_2) v_1))                       "runnc"
         (side-condition (not-code? (term v_1)))
-        (where x_new ,(variable-not-in (term (M v_1 e_2)) (term x))))
+        (where x_new ,(variable-not-in (term (M v_1 e_2)) (term x)))
+        (where f_new ,(variable-not-in (term (M v_1 e_2)) (term f))))
    (--> (in-hole P (in-hole E (reflect (code e))))
         (in-hole P (letc x_new e (in-hole E (code x_new))))               "reify-reflect"
         (where x_new ,(variable-not-in (term (R E e)) (term x))))
