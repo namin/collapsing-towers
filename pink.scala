@@ -156,6 +156,7 @@ object Pink_clambda extends PinkBase {
     (if (eq? 'lift-ref (car exp))  (lift-ref (((eval l) (cadr exp)) env))
     (if (eq?  'num?   (car exp))   (num? (((eval l) (cadr exp)) env))
     (if (eq?  'sym?   (car exp))   (sym? (((eval l) (cadr exp)) env))
+    (if (eq?  'pair?  (car exp))   (pair? (((eval l) (cadr exp)) env))
     (if (eq?  'car    (car exp))   (car  (((eval l) (cadr exp)) env))
     (if (eq?  'cdr    (car exp))   (cdr  (((eval l) (cadr exp)) env))
     (if (eq?  'cons   (car exp))   ((car l) (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
@@ -164,7 +165,7 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'scope (car exp))    (let ev (((eval (cons (lambda _ e e) (cdr l))) (cadr exp)) env) (((ev l) (caddr exp)) env))
     (if (eq?  'open  (car exp))    (let ev (((eval (cons (lambda _ e e) (cdr l))) (cadr exp)) env) (((((ev tie) eval) l) (caddr exp)) env))
     (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env))
-    ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))))
+    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """)
 
@@ -173,6 +174,90 @@ object Pink_clambda extends PinkBase {
   val evc_src = s"""($ev_tie_src (cons (lambda _ e (lift e)) 1))"""
   val fc_src = fac_src.replace("lambda", "clambda")
   val fc_val = parseExp(fc_src)
+
+  // translated to Pink from Scheme at https://github.com/jasonhemann/microKanren/blob/master/microKanren.scm
+  val microKanren = commonReplace("""
+(let = (lambda _ a (lambda _ b (if (- a b) 0 1)))
+(let null? (lambda _ l (if (sym? l) (eq? l '.) 0))
+(let assp (lambda assp p (lambda _ s (if (pair? s) (if (p (car (car s))) (car s) ((assp p) (cdr s))) s)))
+(let var (lambda _ c (cons 'var c))
+(let var? (lambda _ x (if (pair? x) (if (sym? (car x)) (eq? 'var (car x)) 0) 0))
+(let var=? (lambda _ x1 (lambda _ x2 ((= (cdr x1)) (cdr x2))))
+(let walk (lambda walk u (lambda _ s
+  (let pr (if (var? u) ((assp (var=? u)) s) '.)
+    (if (null? pr) u ((walk (cdr pr) s))))))
+(let ext-s (lambda _ x (lambda _ v (lambda _ s (cons (cons x v) s))))
+(let mzero '.
+(let unit (lambda _ s/c (cons s/c mzero))
+(let unify (lambda unify u (lambda _ v (lambda _ s
+  (let u ((walk u) s)
+  (let v ((walk v) s)
+  (if (if (var? u) (if (var? v) ((var=? u) v) 0) 0) s
+  (if (var? u) (((ext-s u) v) s)
+  (if (var? v) (((ext-s v) u) s)
+  (if (if (pair? u) (pair? v) 0)
+      (let s (((unify (car u)) (car v)) s)
+         (if (pair? s) (((unify (cdr u)) (cdr v)) s) 0))
+  (if (eq? u v) s '.))))))))))
+(let == (lambda _ u (lambda _ v (lambda _ s/c
+    (let s (((unify u) v) (car s/c))
+      (if (pair? s) (unit (cons s (cdr s/c))) mzero)))))
+(let call/fresh (lambda _ f (lambda _ s/c
+    (let c (cdr s/c)
+      ((f (var c)) (cons (car s/c) (+ c 1))))))
+(let mplus (lambda mplus $1 (lambda _ $2
+  (if (null? $1) $2
+  (if (pair? $1) (cons (car $1) ((mplus (cdr $1)) $2))
+   ;; (procedure? $1)
+   (lambda () ((mplus $2) ($1)))))))
+(let bind (lambda bind $ (lambda _ g
+  (if (null? $) mzero
+  (if (pair? $) ((mplus (g (car $))) ((bind (cdr $)) g))
+  ;; (procedure? $)
+  (lambda () ((bind ($)) g))))))
+(let disj (lambda _ g1 (lambda _ g2 (lambda _ s/c ((mplus (g1 s/c)) (g2 s/c)))))
+(let conj (lambda _ g1 (lambda _ g2 (lambda _ s/c ((bind (g1 s/c)) g2))))
+(let empty-state (cons '. 0)
+program
+))))))))))))))))))
+""")
+
+  def addParen(p: (Boolean, String)) = {
+    val (need_paren, s) = p
+    if (need_paren) "("+s.trim()+")" else s
+  }
+  def pp(r: Val): (Boolean,String) = r match {
+    case Cst(n) => (false, n.toString)
+    case Str(s) if s=="." => (true, "")
+    case Tup(Str(s), Cst(n)) if s=="var" => (false, s"#(${n.toString})")
+    case Tup(a, b) =>
+      val s1 = addParen(pp(a))
+      val (p2, s2) = pp(b)
+      (true, s1+(if (p2) " " else " . ")+s2)
+  }
+  def show(r: Val): String = addParen(pp(r))
+
+  def test_mk() = {
+    val env = trans(parseExp("(lambda _ err (lambda _ y (err (log y))))"), List("arg1"))
+    def atest(p: String, e: String) {
+      val v = parseExp(microKanren.replace("program", p))
+      val r = run { evalms(List(v), App(App(ev_exp1, Var(0)), App(env, Sym("nil-env")))) }
+      check(show(r))(e)
+    }
+    atest("(let p ((call/fresh (lambda _ q ((== q) 5))) empty-state) (car p))", "(((#(0) . 5)) . 1)")
+    atest("(let p ((call/fresh (lambda _ q ((== q) 5))) empty-state) (cdr p))", "()")
+    val a_and_b = """
+  ((conj
+   (call/fresh (lambda _ a ((== a) 7))))
+   (call/fresh
+    (lambda _ b
+      ((disj
+       ((== b) 5))
+       ((== b) 6)))))"""
+    atest(s"(let p ($a_and_b empty-state) (car p))", "(((#(1) . 5) (#(0) . 7)) . 2)")
+    atest(s"(let p ($a_and_b empty-state) (car (cdr p)))", "(((#(1) . 6) (#(0) . 7)) . 2)")
+    atest(s"(let p ($a_and_b empty-state) (cdr (cdr p)))", "()")
+  }
 
   def test_clambda() = {
     val r1 = run { evalms(List(fc_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
@@ -279,6 +364,7 @@ else 1""") // all interpretation overhead is gone
       test_log()
       test_scope()
       test_open()
+      test_mk()
       println("-- END pink clambda")
     } finally { traceExec = oldTrace }
   }
