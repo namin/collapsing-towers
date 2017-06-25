@@ -2,21 +2,22 @@
 (require redex)
 
 (define-language vm
-  (e x (lit number) (str string) (lam x e) (cons e e) (code e) (let x e e) (app e e) (if e e e) (a e) (b e e) (fix e) (lift e) (run e e)
-     (reflect e) (lamc x e) (letc x e e))
-  (v (lit number) (str string) (lam x e) (cons v v) (code e))
+  (e x (lit number) (str string) (lam f x e) (cons e e) (code e) (let x e e) (app e e) (if e e e) (a e) (b e e) (lift e) (run e e)
+     (reflect e) (lamc f x e) (letc x e e))
+  (v (lit number) (str string) (lam f x e) (cons v v) (code e))
   (a car cdr isLit isStr isCons)
   (b plus minus times eq)
-  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (a E) (b E e) (b v E) (fix E) (lift E) (run E e) (reflect E))
+  (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (a E) (b E e) (b v E) (lift E) (run E e) (reflect E))
   (M hole
-     (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (a M) (b M e) (b v M) (fix M) (lift M) (run M e) (reflect M)
-     (lift (lamc x M)) (if (code e) M e) (if (code e) v M) (run (code e) M) (letc x e M))
-  (R (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (a R) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
-     (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
+     (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (a M) (b M e) (b v M) (lift M) (run M e) (reflect M)
+     (lift (lamc f x M)) (if (code e) M e) (if (code e) v M) (run (code e) M) (letc x e M))
+  (R (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (a R) (b R e) (b v R) (lift R) (run R e) (reflect R)
+     (lift (lamc f x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
   (P hole
      (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (a R) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
-     (lift (lamc x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
-  (x (variable-except lit str lam cons let app if car cdr isLit isStr isCons plus minus times eq fix lift run reflect letc code)))
+     (lift (lamc f x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
+  (x (variable-except lit str lam cons let app if car cdr isLit isStr isCons plus minus times eq lift run reflect letc code))
+  (f x))
 
 (define not-code? (lambda (x) (not ((redex-match vm (code e)) x))))
 (define no-reflect? (lambda (x) (not ((redex-match vm (in-hole E (reflect any))) x))))
@@ -25,7 +26,7 @@
   (reduction-relation
    vm
    (--> (in-hole M (let x v e))                 (in-hole M (subst x v e)) "let")
-   (--> (in-hole M (app (lam x e) v))           (in-hole M (subst x v e)) "lam")
+   (--> (in-hole M (app (lam f x e) v))         (in-hole M (subst x v (subst f (lam f x e) e))) "beta")
    (--> (in-hole M (if (lit 0) e_1 e_2))        (in-hole M e_2)           "if0")
    (--> (in-hole M (if (lit number_0) e_1 e_2)) (in-hole M e_1)           "ifn"
         (side-condition (not (= 0 (term number_0)))))
@@ -49,7 +50,6 @@
    (--> (in-hole M (eq v_1 v_2))
         (in-hole M (lit ,(if (equal? (term v_1) (term v_2)) 1 0)))         "eq"
         (side-condition (and (not-code? (term v_1)) (not-code? (term v_2)))))
-   (--> (in-hole M (fix (lam x e))) (in-hole M (subst x (fix (lam x e)) e)) "fix")
    (--> (in-hole M (if (code e_0) (code e_1) (code e_2)))
         (in-hole M (reflect (code (if e_0 e_1 e_2))))                     "ifccc")
    (--> (in-hole M (a_0 (code e_1)))
@@ -58,8 +58,6 @@
         (in-hole M (reflect (code (b_0 e_1 e_2))))                        "bc")
    (--> (in-hole M (app (code e_1) (code e_2)))
         (in-hole M (reflect (code (app e_1 e_2))))                        "appc")
-   (--> (in-hole M (fix (code e)))
-        (in-hole M (reflect (code (fix e))))                              "fixc")
    (--> (in-hole M (lift (lit number_1)))
         (in-hole M (code (lit number_1)))                                 "lift-lit")
    (--> (in-hole M (lift (str string_1)))
@@ -67,16 +65,17 @@
    (--> (in-hole M (lift (cons (code e_1) (code e_2))))
         (in-hole M (reflect (code (cons e_1 e_2))))                       "lift-cons")
    (--> (in-hole M (lift (code e))) (in-hole M (reflect (code (lift e)))) "lift-code")
-   (--> (in-hole M (lift (lamc x (code e))))
-        (in-hole M (reflect (code (lam x e))))                            "lift-lamc")
-   (--> (in-hole M (lift (lam x e)))
-        (in-hole M (lift (lamc x (subst x (code x) e))))                  "lift-lam")
+   (--> (in-hole M (lift (lamc f x (code e))))
+        (in-hole M (reflect (code (lam f x e))))                          "lift-lamc")
+   (--> (in-hole M (lift (lam f x e)))
+        (in-hole M (lift (lamc f x (subst x (code x) (subst f (code f) e))))) "lift-lam")
    (--> (in-hole M (run (code e_1) (code e_2)))
         (in-hole M (reflect (code (run e_1 e_2))))                        "runcc")
    (--> (in-hole M (run v_1 (code e_2)))
-        (in-hole M (app (lam x_new e_2) v_1))                             "runnc"
+        (in-hole M (app (lam f_new x_new e_2) v_1))                       "runnc"
         (side-condition (not-code? (term v_1)))
-        (where x_new ,(variable-not-in (term (M v_1 e_2)) (term x))))
+        (where x_new ,(variable-not-in (term (M v_1 e_2)) (term x)))
+        (where f_new ,(variable-not-in (term (M v_1 e_2)) (term f))))
    (--> (in-hole P (in-hole E (reflect (code e))))
         (in-hole P (letc x_new e (in-hole E (code x_new))))               "reify-reflect"
         (where x_new ,(variable-not-in (term (R E e)) (term x))))
@@ -86,10 +85,12 @@
 
 (define-metafunction vm
   subst : x any any -> any
-  [(subst x_1 any_1 (lam x_1 any_2)) (lam x_1 any_2)]
-  [(subst x_1 any_1 (lam x_2 any_2))
-   (lam x_new (subst x_1 any_1 (subst-var x_2 x_new any_2)))
-   (where x_new ,(variable-not-in (term (x_1 any_1 any_2)) (term x_2)))]
+  [(subst x_1 any_1 (lam f x_1 any_2)) (lam f x_1 any_2)]
+  [(subst f   any_1 (lam f x_1 any_2)) (lam f x_1 any_2)]
+  [(subst x_1 any_1 (lam f x_2 any_2))
+   (lam f_new x_new (subst x_1 any_1 (subst-var x_2 x_new (subst-var f f_new any_2))))
+   (where x_new ,(variable-not-in (term (x_1 any_1 any_2)) (term x_2)))
+   (where f_new ,(variable-not-in (term (x_1 any_1 any_2)) (term f)))]
   [(subst x_1 any_1 (let x_1 any_x any_2)) (let x_1 (subst x_1 any_1 any_x) any_2)]
   [(subst x_1 any_1 (let x_2 any_x any_2))
    (let x_new (subst x_1 any_1 any_x) (subst x_1 any_1 (subst-var x_2 x_new any_2)))
@@ -162,13 +163,13 @@
     (pp-each (list (car l) (last l)))))
 
 (define fac
-  `(fix (app l (lam fac (app l (lam n
+  `(app l (lam fac n
    (if n
        (times n (app fac (minus n (app l (lit 1)))))
-       (app l (lit 1)))))))))
+       (app l (lit 1))))))
 
-;(pp-each (acc-trace (term (app (let l (lam x x) ,fac) (lit 3)))))
-;(pp-each (acc-trace (second (last (acc-trace (term (app (let l (lam x (lift x)) ,fac) (lift (lit 3)))))))))
+(pp-each (acc-trace (term (app (let l (lam f x x) ,fac) (lit 3)))))
+(pp-each (acc-trace (second (last (acc-trace (term (app (let l (lam f x (lift x)) ,fac) (lift (lit 3)))))))))
 
 (define evl (lambda (l)
   `(fix (lam ev (lam exp (lam env
@@ -180,9 +181,8 @@
    (if (eq (str "times") (car exp)) (times (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
    (if (eq (str "eq")    (car exp)) (eq    (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
    (if (eq (str "if")    (car exp)) (if (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) env))
-   (if (eq (str "lam")   (car exp)) ,(l `(lam x (app (app ev (car (cdr (cdr exp)))) (lam y (if (eq y (car (cdr exp))) x (app env y))))))
+   (if (eq (str "lam")   (car exp)) ,(l `(lam f x (app (app ev (car (cdr (cdr (cdr exp))))) (lam y (if (eq y (car (cdr exp))) f (if (eq y (car (cdr (cdr exp)))) x (app env y)))))))
    (if (eq (str "let")   (car exp)) (let x (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) (lam y (if (eq y (car (cdr exp))) x (app env y)))))
-   (if (eq (str "fix")   (car exp)) (fix (app (app ev (car (cdr exp))) env))
    (if (eq (str "lift")  (car exp)) (lift  (app (app ev (car (cdr exp))) env))
    (if (eq (str "isLit") (car exp)) (isLit (app (app ev (car (cdr exp))) env))
    (if (eq (str "isStr") (car exp)) (isStr (app (app ev (car (cdr exp))) env))
@@ -191,31 +191,7 @@
    (if (eq (str "cdr")   (car exp)) (cdr (app (app ev (car (cdr exp))) env))
    (if (eq (str "app")   (car exp)) (app (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
    (str "error")
-   ))))))))))))))))))))))))
-
-
-(define eva (lambda (l)
-  `(fix (lam ev (lam exp (lam env
-   (if (isLit exp) ,(l `exp)
-   (if (isStr exp) (app env exp)
-    (if (eq (str "quote") (car exp)) ,(l `(car (cdr exp)))
-    (if (eq (str "plus")  (car exp)) (plus  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
-    (if (eq (str "minus") (car exp)) (minus (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
-    (if (eq (str "times") (car exp)) (times (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
-    (if (eq (str "eq")    (car exp)) (eq    (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
-    (if (eq (str "if")    (car exp)) (if (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) env))
-    (if (eq (str "lam")   (car exp)) ,(l `(lam x (app (app ev (car (cdr (cdr exp)))) (lam y (if (eq y (car (cdr exp))) x (app env y))))))
-    (if (eq (str "let")   (car exp)) (let x (app (app ev (car (cdr (cdr exp)))) env) (app (app ev (car (cdr (cdr (cdr exp))))) (lam y (if (eq y (car (cdr exp))) x (app env y)))))
-    (if (eq (str "fix")   (car exp)) (fix (app (app ev (car (cdr exp))) env))
-    (if (eq (str "lift")  (car exp)) (lift  (app (app ev (car (cdr exp))) env))
-    (if (eq (str "isLit") (car exp)) (isLit (app (app ev (car (cdr exp))) env))
-    (if (eq (str "isStr") (car exp)) (isStr (app (app ev (car (cdr exp))) env))
-    (if (eq (str "cons")  (car exp)) ,(l `(cons  (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env)))
-    (if (eq (str "car")   (car exp)) (car (app (app ev (car (cdr exp))) env))
-    (if (eq (str "cdr")   (car exp)) (cdr (app (app ev (car (cdr exp))) env))
-    (if (eq (str "app")   (car exp)) (app (app (app ev (car (cdr exp))) env) (app (app ev (car (cdr (cdr exp)))) env))
-   (str "error")
-   ))))))))))))))))))))))))
+   )))))))))))))))))))))))
 
 (define ev (evl (lambda (x) `(app l ,x))))
 
