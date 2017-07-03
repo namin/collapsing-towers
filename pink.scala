@@ -165,7 +165,10 @@ object Pink_clambda extends PinkBase {
     (if (eq?  'scope (car exp))    (let ev (((eval (cons (lambda _ e e) (cdr l))) (cadr exp)) env) (((ev l) (caddr exp)) env))
     (if (eq?  'open  (car exp))    (let ev (((eval (cons (lambda _ e e) (cdr l))) (cadr exp)) env) (((((ev tie) eval) l) (caddr exp)) env))
     (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env))
-    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))))))
+    (if (eq?  'EM     (car exp))   (exec/env 0 (trans-quote/env (car (cdr exp))))
+    (if (eq?  'exec/env (car exp)) (exec/env (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  'trans-quote/env (car exp)) (trans-quote/env (cadr exp))
+    ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """)
 
