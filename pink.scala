@@ -305,6 +305,24 @@ else 1""") // all interpretation overhead is gone
     run { evalms(List(parseExp("(log 1)")), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }
   }
 
+  def test_em() {
+    println("begin test_EM")
+    val ev_log_src = commonReplace(ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log (env exp)) (env exp))"))
+    val v1 = run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '($fac_src 4)) env))")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(v1)("Cst(24)")
+    val v2 = run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '(${fac_src.replace("lambda", "clambda")} 4)) env))")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(v2)("Cst(24)")
+    val v3 = run { evalms(List(parseExp(commonReplace(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    (if (if (sym? exp) (eq? 'n exp) 0) (log (((eval l) exp) env))
+    ((((tie ev) l) exp) env))))) l) '($fac_src 4)) env))"""))), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(v3)("Cst(24)")
+    val v4 = run { evalms(List(parseExp(commonReplace(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    (if (if (sym? exp) (eq? 'n exp) 0) (log (((eval l) exp) env))
+    ((((tie ev) l) exp) env))))) l) '(${fac_src.replace("lambda", "clambda")} 4)) env))"""))), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(v4)("Cst(24)")
+    println("end test_EM")
+  }
+
   def test_scope() {
     println("begin test_scope")
     val ev_log_src = commonReplace(ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log (env exp)) (env exp))"))
@@ -365,6 +383,7 @@ else 1""") // all interpretation overhead is gone
       traceExec = true
       test_clambda()
       test_log()
+      test_em()
       test_scope()
       test_open()
       test_mk()
