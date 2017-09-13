@@ -133,6 +133,18 @@ object Pink_CPS extends PinkBase {
       Lit(0)))
     }
     check(r5)("Cst(24)")
+
+    val nested_src = "(lambda f n (if (if n 0 1) 2 3))"
+    val nested_val = parseExp(nested_src)
+    val r6 = run { evalms(List(nested_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(0)),Lam(Var(4)))))) }
+    check(r6)("Cst(2)")
+
+    val c6 = reifyc { evalms(List(nested_val),App(App(App(evc_exp1,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
+    val r7 = run { evalms(Nil, App(App(c6, Lit(0)), Lam(Var(1)))) }
+    check(r7)("Cst(2)")
+
+    println("nested:"+pretty(c6,Nil))
+
   }
 }
 
