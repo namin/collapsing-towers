@@ -1,4 +1,4 @@
-/* collapsing multiple levels of interpreters */
+// multi-level core language λ↑↓ as a defitional interpreter in Scala
 
 object Base {
 
