@@ -32,14 +32,8 @@ object Lisp {
   import parser._
 
   /* 
-    TODO:
-      + fix parser perf problems
-      + proper var names
-      + double interpretation
-      + pretty printing
-      + double code generation
-      - use right-to-left de brujin indexes to make closures ctx-independent
-          (not so simple b/c let insertion)
+    alternative: use right-to-left de brujin indexes to make closures ctx-independent
+    (not so simple b/c let insertion)
   */
 
   // ********************* convert exp encoded as val --> exp  *********************
@@ -105,7 +99,9 @@ object Lisp {
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
   }
 
-  // TODO: meta-circular implementation of exec, exec/env, trans-quote, trans-quote/env
+  // NOTE:
+  // here, missing meta-circular implementation of exec, exec/env, trans-quote, trans-quote/env
+  // but see Pink.Pink_clambda for how it can be done
 
 
   // ********************* source programs  *********************
@@ -237,7 +233,7 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
   val eval_cps_src = eval_cps_poly_src.replace("maybe-lift","nolift") // plain interpreter
   val evalc_cps_src = eval_cps_poly_src.replace("maybe-lift","lift")  // generating extension = compiler
 
-  // TODO: next step: take maybe-lift as parameter instead of simulating macros
+  // next step (see Pink): take maybe-lift as parameter instead of simulating macros
 
   // NOTE: have to be careful with 'equs': if arg is not a string, it might create a code object */
 
