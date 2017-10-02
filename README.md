@@ -28,3 +28,9 @@ Run `core-exs.rkt` in [DrRacket](https://racket-lang.org/).
 Run `sbt run` using Scala's [SBT](http://www.scala-sbt.org/).
 
 Modify [`test-main.scala`](test-main.scala) to run more or fewer tests and benchmarks.
+
+# Pink in Scheme
+available at [namin/pink](https://github.com/namin/pink)
+
+# Purple
+available at [namin/lms-black](https://github.com/namin/lms-black)
