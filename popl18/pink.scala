@@ -14,7 +14,7 @@ import Prog._
 object Pink {
 
   val ev_poly_src = """
-(lambda _ maybe-lift (lambda _ eval (lambda _ exp (lambda _ env
+(lambda _ maybe-lift (lambda tie eval (lambda _ exp (lambda _ env
   (if (num?                exp)    (maybe-lift exp)
   (if (sym?                exp)    (env exp)
   (if (sym?           (car exp))   
@@ -60,6 +60,7 @@ object Pink {
   def test() = {
     testCorrectnessOptimality()
     testInstrumentation()
+    testEM()
   }
 
   def testCorrectnessOptimality() = {
@@ -125,6 +126,41 @@ object Pink {
     var s = ""
     log = {x => s += x.toString+";" }
     check(run { evalms(Nil,App(fact_exp,Lit(3))) })("Cst(6)")
+    check(s)("Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+    log = oldLog
+  }
+
+  def addCases(cs: String*): String = {
+    val app_case = "((env (car exp)) ((eval (cadr exp)) env))"
+    ev_poly_src.replace(app_case, cs.mkString("\n")+"\n"+app_case+(")"*cs.length))
+  }
+
+  val ev0_poly_src = addCases(
+    "(if (eq? 'EM (car exp)) (run (maybe-lift 0) (trans (car (cdr exp))))")
+  val evn_poly_src = addCases(
+    "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
+
+  val ev0_src = s"""(lambda eval e ((($ev0_poly_src (lambda _ e e)) eval) e))"""
+  val evn_src = s"""(lambda eval e ((($evn_poly_src (lambda _ e e)) eval) e))"""
+
+  val emt_src = """((EM (((lambda ev exp (lambda _ env
+     (if (if (sym? exp) (eq? 'n exp) 0) (log 0 ((eval exp) env)) (((tie ev) exp) env))))
+     '(lambda f n (if n (* n (f (- n 1))) 1))) env)) 3)"""
+  val ev0_val = parseExp(ev0_src)
+  val evn_val = parseExp(evn_src)
+  val emt_val = parseExp(emt_src)
+  val ev0_exp1 = trans(ev0_val,List("arg"))
+  val ev0_exp2 = trans(ev0_val,List("arg", "arg2"))
+  def testEM() = {
+    // sanity checks
+    check(run { evalms(List(fac_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lit(4))) })("Cst(24)")
+    check(run { evalms(List(fac_val,evn_val), App(App(App(App(App(ev0_exp2,Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2")), Lit(4))) })("Cst(24)")
+
+    // Section 5.1.2 -- Modifying the Tower Structure
+    val oldLog = log
+    var s = ""
+    log = {x => s += x.toString+";" }
+    check(run { evalms(List(emt_val), App(App(ev0_exp1, Var(0)), Sym("nil-env"))) })("Cst(6)")
     check(s)("Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
     log = oldLog
   }
