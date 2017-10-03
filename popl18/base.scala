@@ -271,22 +271,22 @@ object Base {
   }
   def pretty(e: Exp, env: List[String]): String = e match {
     case Lit(n) => n.toString
-    case Sym(n) => "\""+n+"\""
+    case Sym(n) => "'"+n
     case Var(x) => try env(x) catch { case _ => "?" }
-    case IsNum(a) => s"isNum(${pretty(a,env)})"
-    case IsStr(a) => s"isStr(${pretty(a,env)})"
-    case Lift(a) => s"lift(${pretty(a,env)})"
-    case Fst(a) => s"${pretty(a,env)}._1"
-    case Snd(a) => s"${pretty(a,env)}._2"
-    case Equs(a,b) => s"${pretty(a,env)} == ${pretty(b,env)}"
-    case Plus(a,b) => s"(${pretty(a,env)} + ${pretty(b,env)})"
-    case Minus(a,b) => s"(${pretty(a,env)} - ${pretty(b,env)})"
-    case Times(a,b) => s"(${pretty(a,env)} * ${pretty(b,env)})"
+    case IsNum(a) => s"(num? ${pretty(a,env)})"
+    case IsStr(a) => s"(sym? ${pretty(a,env)})"
+    case Lift(a) => s"(lift ${pretty(a,env)})"
+    case Fst(a) => s"(car ${pretty(a,env)})"
+    case Snd(a) => s"(cdr ${pretty(a,env)})"
+    case Equs(a,b) => s"(eq? ${pretty(a,env)} ${pretty(b,env)})"
+    case Plus(a,b) => s"(+ ${pretty(a,env)} ${pretty(b,env)})"
+    case Minus(a,b) => s"(- ${pretty(a,env)} ${pretty(b,env)})"
+    case Times(a,b) => s"(* ${pretty(a,env)} ${pretty(b,env)})"
     case App(a,b) => s"(${pretty(a,env)} ${pretty(b,env)})"
     case Let(a,Var(n)) if n == env.length => pretty(a,env)
-    case Let(a,b) => s"${indent}let x${env.length} = ${block(pretty(a,env))} in ${(pretty(b,env:+("x"+env.length)))}"
-    case Lam(e) => s"${indent}fun f${env.length} x${env.length+1} ${block(pretty(e,env:+("f"+env.length):+("x"+(env.length+1))))}"
-    case If(c,a,b) => s"${indent}if (${pretty(c,env)}) ${block(pretty(a,env))} ${indent}else ${block(pretty(b,env))}"
+    case Let(a,b) => s"${indent}(let x${env.length} ${block(pretty(a,env))} ${(pretty(b,env:+("x"+env.length)))})"
+    case Lam(e) => s"${indent}(lambda f${env.length} x${env.length+1} ${block(pretty(e,env:+("f"+env.length):+("x"+(env.length+1))))})"
+    case If(c,a,b) => s"${indent}(if ${pretty(c,env)} ${block(pretty(a,env))} ${indent}${block(pretty(b,env))})"
     case _ => e.toString
   }
 
