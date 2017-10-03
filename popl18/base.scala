@@ -26,7 +26,9 @@ object Base {
   case class Log(b:Exp,e:Exp) extends Exp
 
   // for custom extensions to AST
-  case class Special(f:Env => Val) extends Exp
+  case class Special(f:Env => Val) extends Exp {
+    override def toString = "<special>"
+  }
 
   type Env = List[Val]
 

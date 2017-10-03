@@ -12,7 +12,6 @@ object Prog {
 import Prog._
 
 object Pink {
-
   val ev_poly_src = """
 (lambda _ maybe-lift (lambda tie eval (lambda _ exp (lambda _ env
   (if (num?                exp)    (maybe-lift exp)
@@ -66,26 +65,24 @@ object Pink {
   def testCorrectnessOptimality() = {
     // interpretation
     // ((eval fac-src) 4) ;; => 24
-    val i1 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) }
-    check(i1)("Cst(24)")
+    check(run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) })("Cst(24)")
 
     // double interpretation
     // (((eval eval-src) fac-src) 4) ;; => 24
-    val i2 = run { evalms(List(fac_val,ev_val), App(App(App(App(App(ev_exp2,Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2")), Lit(4))) }
-    check(i2)("Cst(24)")
+    check(run { evalms(List(fac_val,ev_val), App(App(App(App(App(
+      ev_exp2,Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2")), Lit(4))) })("Cst(24)")
 
     // triple interpretation
     // ((((eval eval-src) eval-src) fac-src) 4) ;; => 24
-    val i3 = run { evalms(List(fac_val,ev_val), App(App(App(App(App(App(App(ev_exp2,Var(1)),Sym("nil-env")), Var(1)), Sym("nil-env2")), Var(0)), Sym("nil-env3")), Lit(4))) }
-    check(i3)("Cst(24)")
+    check(run { evalms(List(fac_val,ev_val), App(App(App(App(App(App(App(
+      ev_exp2,Var(1)),Sym("nil-env")), Var(1)), Sym("nil-env2")), Var(0)), Sym("nil-env3")), Lit(4))) })("Cst(24)")
 
     // compilation
     // (evalc fac-src) ;; => <code for fac>
     val c1 = reifyc { evalms(List(fac_val),App(App(evc_exp1,Var(0)),Sym("nil-env"))) }
     check(c1)(fac_exp_anf.toString)
     // ((run 0 (evalc fac-src)) 4) ;; => 24
-    val r1 = run { evalms(Nil,App(c1,Lit(4))) }
-    check(r1)("Cst(24)")
+    check(run { evalms(Nil,App(c1,Lit(4))) })("Cst(24)")
 
     // optimality: verify collapse
     // ((eval evalc-src) fac-src) ;; => <code for fac>
@@ -119,8 +116,7 @@ object Pink {
     (let x4 (log 0 x1) 
     (let x5 (- x4 1) 
     (let x6 (f0 x5) (* x3 x6))))) 
-  1)))
-""")
+  1)))""")
 
     val oldLog = log
     var s = ""
@@ -205,8 +201,7 @@ object Pink_CPS {
 
   def test() = {
     // interpretation of fac
-    val r1 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) }
-    check(r1)("Cst(24)")
+    check(run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) })("Cst(24)")
 
     // compilation of fac
     val facc_exp = reifyc { evalms(List(fac_val),App(App(App(evc_exp1,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
@@ -220,17 +215,15 @@ object Pink_CPS {
           (let x8 (* x1 x7) (x3 x8))) (x5 x6)))) 
     (x3 1))))""")
 
-    val r2 = run { evalms(Nil, App(App(facc_exp, Lit(4)),Lam(Var(1)))) }
-    check(r2)("Cst(24)")
+    check(run { evalms(Nil, App(App(facc_exp, Lit(4)),Lam(Var(1)))) })("Cst(24)")
 
     val nested_src = "(lambda f n (if (if n 0 1) 2 3))"
     val nested_val = parseExp(nested_src)
-    val r3 = run { evalms(List(nested_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(0)),Lam(Var(4)))))) }
-    check(r3)("Cst(2)")
+    check(run { evalms(List(nested_val), App(App(App(
+      ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(0)),Lam(Var(4)))))) })("Cst(2)")
 
     val c4 = reifyc { evalms(List(nested_val),App(App(App(evc_exp1,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
-    val r4 = run { evalms(Nil, App(App(c4, Lit(0)), Lam(Var(1)))) }
-    check(r4)("Cst(2)")
+    check(run { evalms(Nil, App(App(c4, Lit(0)), Lam(Var(1)))) })("Cst(2)")
 
     check(pretty(c4,Nil))("""(lambda f0 x1 
   (lambda f2 x3 
@@ -271,7 +264,7 @@ object Pink_CPS {
   val ev0_exp1 = trans(ev0_val,List("arg"))
   val ev0_exp2 = trans(ev0_val,List("arg", "arg2"))
   def testEM() = {
-    // sanity checks
+    // sanity check
     check(run { evalms(List(fac_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) })("Cst(24)")
 
     check(run { evalms(List(emt_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) })("Cst(10)")
@@ -326,8 +319,7 @@ object Pink_clambda {
   val evc_exp1 = trans(evc_val, List("arg1"))
 
   def test_clambda() = {
-    val r1 = run { evalms(List(fc_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
-    check(r1)("Cst(24)")
+    check(run { evalms(List(fc_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) })("Cst(24)")
     val c1 = (run { evalms(List(fc_val), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }).asInstanceOf[Clo]
     check(c1.env)("List()")
     check(pretty(c1.e, List("r", "n")))("""(if n 
@@ -336,25 +328,25 @@ object Pink_clambda {
 1)""") // all interpretation overhead is gone
 
     val c2_val = parseExp("(lambda _ x (clambda _ y (* (+ x x) y)))")
-    val r2 = run { evalms(List(c2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
-    check(r2)("Cst(8)")
+    check(run { evalms(List(c2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) })("Cst(8)")
 
     val c3_val = parseExp("(clambda _ x (lambda _ y (* (+ x x) y)))")
-    val r3 = run { evalms(List(c3_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
-    check(r3)("Cst(8)")
+    check(run { evalms(List(c3_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) })("Cst(8)")
 
     val c4_val = parseExp("(clambda _ x (clambda _ y (* (+ x x) y)))")
-    val r4 = run { evalms(List(c4_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
-    check(r4)("Cst(8)")
+    check(run { evalms(List(c4_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) })("Cst(8)")
 
     val c5_val = parseExp("(let inc (lambda _ x (+ x 1)) (clambda _ y (inc y)))")
-    val r5 = run { evalms(List(c5_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
-    check(r5)("Cst(5)")
+    check(run { evalms(List(c5_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) })("Cst(5)")
 
     val c6_val = parseExp("(lambda _ x (clambda _ y (lambda _ l (* (l (+ x x)) (l y)))))")
-    val r6 = run { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) }
+    check(run { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) })("Cst(8)")
     val c6 = (run { evalms(List(c6_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1))) }).asInstanceOf[Clo]
-    check(r6)("Cst(8)")
+    check(c6.env)("List()")
+    check(pretty(c6.e, List("_", "l")))("""(lambda f2 x3 
+  (let x4 (+ <special> <special>) 
+  (let x5 (x3 x4) 
+  (let x6 (x3 l) (* x5 x6)))))""")
     val c7 = reifyc { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
     check(pretty(c7, Nil))("(* 2 4)")
   }
@@ -365,27 +357,25 @@ object Pink_clambda {
     log = {x => s += x.toString+";" }
 
     val ev_log_src = ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log ((car l) 0) (env exp)) (env exp))")
-    val v1 = run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '($fac_src 4)) env))")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
-    check(v1)("Cst(24)")
+    check(run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '($fac_src 4)) env))")),
+      App(App(ev_exp1, Var(0)), Sym("nil-env"))) })("Cst(24)")
     check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
     s = ""
 
-    val v2 = run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '(${fac_src.replace("lambda", "clambda")} 4)) env))")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
-    check(v2)("Cst(24)")
+    check(run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '(${fac_src.replace("lambda", "clambda")} 4)) env))")),
+      App(App(ev_exp1, Var(0)), Sym("nil-env"))) })("Cst(24)")
     check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
     s = ""
 
-    val v3 = run { evalms(List(parseExp(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    check(run { evalms(List(parseExp(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
     (if (if (sym? exp) (eq? 'n exp) 0) (log ((car l) 0) (((eval l) exp) env))
-    ((((tie ev) l) exp) env))))) l) '($fac_src 4)) env))""")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
-    check(v3)("Cst(24)")
+    ((((tie ev) l) exp) env))))) l) '($fac_src 4)) env))""")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) })("Cst(24)")
     check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
     s = ""
 
-    val v4 = run { evalms(List(parseExp(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    check(run { evalms(List(parseExp(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
     (if (if (sym? exp) (eq? 'n exp) 0) (log ((car l) 0) (((eval l) exp) env))
-    ((((tie ev) l) exp) env))))) l) '(${fac_src.replace("lambda", "clambda")} 4)) env))""")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
-    check(v4)("Cst(24)")
+    ((((tie ev) l) exp) env))))) l) '(${fac_src.replace("lambda", "clambda")} 4)) env))""")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) })("Cst(24)")
     check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
     s = ""
 
