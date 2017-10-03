@@ -1,4 +1,4 @@
-// multi-level core language λ↑↓ as a defitional interpreter in Scala
+// multi-level core language λ↑↓ as a definitional interpreter in Scala
 
 object Base {
   var log: Val => Unit = {x => println(x)}
