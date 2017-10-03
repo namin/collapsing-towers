@@ -242,4 +242,35 @@ object Pink_CPS {
       (x3 3)))))""")
 
   }
+
+ def addCases(cs: String*): String = {
+    val app_case = "(((eval (cadr exp)) env) (lambda _ v2 (((env (car exp)) v2) (maybe-lift (lambda _ x (k x))))))"
+    ev_poly_src.replace(app_case, cs.mkString("\n")+"\n"+app_case+(")"*cs.length))
+  }
+
+  val ev0_poly_src = addCases(
+    "(if (eq? 'EM (car exp)) (run (maybe-lift 0) (trans (car (cdr exp))))")
+  val evn_poly_src = addCases(
+    "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
+
+  val ev0_src = s"""(lambda eval e ((($ev0_poly_src (lambda _ e e)) eval) e))"""
+  val evn_src = s"""(lambda eval e ((($evn_poly_src (lambda _ e e)) eval) e))"""
+
+  val emt_src = """(let call/cc (lambda _ f (EM (
+((env 'f) (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k1 (k v)))))))
+(maybe-lift (lambda _ x x)))))
+
+(+ 3 (call/cc (lambda _ k (k (k (k 1)))))))
+"""
+  val ev0_val = parseExp(ev0_src)
+  val evn_val = parseExp(evn_src)
+  val emt_val = parseExp(emt_src)
+  val ev0_exp1 = trans(ev0_val,List("arg"))
+  val ev0_exp2 = trans(ev0_val,List("arg", "arg2"))
+  def testEM() = {
+    // sanity checks
+    check(run { evalms(List(fac_val), App(App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lit(4)), Lam(Var(4)))) })("Cst(24)")
+
+    check(run { evalms(List(emt_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(Var(4)))) })("Cst(10)")
+  }
 }
