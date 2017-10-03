@@ -27,6 +27,11 @@ object Lisp {
 
   import parser._
 
+  def parseExp(s: String) = {
+    val Success(v, _) = parseAll(exp, s)
+    v
+  }
+
   // ********************* convert exp encoded as val --> exp  *********************
 
   def trans(e: Val, env: List[String]): Exp = e match {
@@ -70,10 +75,5 @@ object Lisp {
     case Tup(Str("lift-ref"),Tup(a,N)) =>
       Special(benv => Code(Special(b2 => evalms(benv,trans(a,env)))))
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
-  }
-
-  def parseExp(s: String) = {
-    val Success(v, _) = parseAll(exp, s)
-    v
   }
 }
