@@ -162,6 +162,9 @@ object Pink {
     log = {x => s += x.toString+";" }
     check(run { evalms(List(emt_val), App(App(ev0_exp1, Var(0)), Sym("nil-env"))) })("Cst(6)")
     check(s)("Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+    s = ""
+    check(run { evalms(List(emt_val, evn_val), App(App(App(App(ev0_exp2, Var(1)), Sym("nil-env")), Var(0)), Sym("nil-env2"))) })("Cst(6)")
+    check(s)("Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
     log = oldLog
   }
 }
