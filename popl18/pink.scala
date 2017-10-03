@@ -256,6 +256,8 @@ object Pink_CPS {
   val ev0_src = s"""(lambda eval e ((($ev0_poly_src (lambda _ e e)) eval) e))"""
   val evn_src = s"""(lambda eval e ((($evn_poly_src (lambda _ e e)) eval) e))"""
 
+  // 5.1.3 Language Extensions in User Code
+  // defining call/cc in terms of EM
   val emt_src = """(let call/cc (lambda _ f (EM (
 ((env 'f) (maybe-lift (lambda _ v (maybe-lift (lambda _ k1 (k1 (k v)))))))
 (maybe-lift (lambda _ x x)))))
