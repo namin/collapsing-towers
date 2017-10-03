@@ -343,10 +343,10 @@ object Pink_clambda {
     check(run { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) })("Cst(8)")
     val c6 = (run { evalms(List(c6_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1))) }).asInstanceOf[Clo]
     check(c6.env)("List()")
-    check(pretty(c6.e, List("_", "l")))("""(lambda f2 x3 
+    check(pretty(c6.e, List("_", "y")))("""(lambda f2 x3 
   (let x4 (+ <special> <special>) 
   (let x5 (x3 x4) 
-  (let x6 (x3 l) (* x5 x6)))))""")
+  (let x6 (x3 y) (* x5 x6)))))""")
     val c7 = reifyc { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
     check(pretty(c7, Nil))("(* 2 4)")
   }
