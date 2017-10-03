@@ -125,7 +125,6 @@ object Base {
   // lifting is shallow, i.e. 
   //   Rep[A]=>Rep[B]  ==> Rep[A=>B]
   //   (Rep[A],Rep[B]) ==> Rep[(A,B)]
-  //   Cell[Rep[A]]    ==> Rep[Cell[A]]
   def lift(v: Val): Exp = v match {
     case Cst(n) => // number
       Lit(n)
