@@ -53,8 +53,11 @@ object Pink {
   val fac_exp_anf = reify { anf(List(Sym("XX")),fac_exp) }
 
   def test() = {
-    // Correctness and Optimality
+    testCorrectnessOptimality()
+    testInstrumentation()
+  }
 
+  def testCorrectnessOptimality() = {
     // interpretation
     // ((eval fac-src) 4) ;; => 24
     val i1 = run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) }
@@ -88,5 +91,36 @@ object Pink {
     // further tower
     // (((eval eval-src) evalc-src) fac-src) ;; => <code for fac>
     check(reifyc { evalms(List(fac_val,evc_val, ev_val), App(App(App(App(App(App(ev_exp3,Var(2)), Sym("nil-env0")), Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2"))) })(fac_exp_anf.toString)
+
+    check(pretty(fac_exp_anf, Nil))("""(lambda f0 x1 
+  (if x1 
+    (let x2 (- x1 1) 
+    (let x3 (f0 x2) (* x1 x3))) 
+  1))""")
+  }
+
+  val evt_poly_src = ev_poly_src.replace("(env exp)", "(if (eq? 'n exp) (log (maybe-lift 0) (env exp)) (env exp))")
+  val evtc_src = s"""(lambda eval e ((($evt_poly_src (lambda _ e (lift e))) eval) e))"""
+  val evtc_val = parseExp(evtc_src)
+  val evtc_exp1 = trans(evtc_val, List("arg1"))
+  def testInstrumentation() = {
+    // (trace-n-evalc fac-src) ;; => <code of fac with extra log calls >
+    val fact_exp = reifyc { evalms(List(fac_val),App(App(evtc_exp1,Var(0)),Sym("nil-env"))) }
+    check(pretty(fact_exp, Nil))("""(lambda f0 x1 
+  (let x2 (log 0 x1) 
+  (if x2 
+    (let x3 (log 0 x1) 
+    (let x4 (log 0 x1) 
+    (let x5 (- x4 1) 
+    (let x6 (f0 x5) (* x3 x6))))) 
+  1)))
+""")
+
+    val oldLog = log
+    var s = ""
+    log = {x => s += x.toString+";" }
+    check(run { evalms(Nil,App(fact_exp,Lit(3))) })("Cst(6)")
+    check(s)("Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+    log = oldLog
   }
 }

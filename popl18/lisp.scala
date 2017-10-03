@@ -54,6 +54,7 @@ object Lisp {
     case Tup(Str("nolift"),Tup(a,N)) => trans(a,env)
     case Tup(Str("eq?"),Tup(a,Tup(b,N))) => Equs(trans(a,env),trans(b,env))
     case Tup(Str("run"),Tup(b,Tup(a,N))) => Run(trans(b,env),trans(a,env))
+    case Tup(Str("log"),Tup(b,Tup(a,N))) => Log(trans(b,env),trans(a,env))
     case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
     // default case: generic app
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))

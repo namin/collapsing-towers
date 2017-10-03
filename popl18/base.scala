@@ -1,6 +1,7 @@
 // multi-level core language λ↑↓ as a defitional interpreter in Scala
 
 object Base {
+  var log: Val => Unit = {x => println(x)}
 
   abstract class Exp
   case class Lit(n:Int) extends Exp
@@ -22,6 +23,7 @@ object Base {
   case class IsCons(a:Exp) extends Exp
   case class Lift(e:Exp) extends Exp
   case class Run(b:Exp,e:Exp) extends Exp
+  case class Log(b:Exp,e:Exp) extends Exp
 
   // for custom extensions to AST
   case class Special(f:Env => Val) extends Exp
@@ -96,6 +98,8 @@ object Base {
       reflect(Lift(anf(env,e)))
     case Run(b,e) =>
       reflect(Run(anf(env,b),reify(anf(env,e))))
+    case Log(b,e) =>
+      reflect(Log(anf(env,b),reify(anf(env,e))))
     case Special(f) =>
       reflect(Special(f))
   }
@@ -165,6 +169,16 @@ object Base {
         case _ =>
           val code = reifyc(evalms(env, e))
           reifyv(evalms(env, code))
+      }
+
+    case Log(b,e) =>
+      evalms(env,b) match {
+        case Code(b1) =>
+          reflectc(Log(b1, reifyc(evalms(env,e))))
+        case _ =>
+          val r = evalms(env, e)
+          log(r)
+          r
       }
 
     case App(e1,e2) =>
@@ -282,6 +296,8 @@ object Base {
     case Plus(a,b) => s"(+ ${pretty(a,env)} ${pretty(b,env)})"
     case Minus(a,b) => s"(- ${pretty(a,env)} ${pretty(b,env)})"
     case Times(a,b) => s"(* ${pretty(a,env)} ${pretty(b,env)})"
+    case Run(a,b) => s"(run ${pretty(a,env)} ${pretty(b,env)})"
+    case Log(a,b) => s"(log ${pretty(a,env)} ${pretty(b,env)})"
     case App(a,b) => s"(${pretty(a,env)} ${pretty(b,env)})"
     case Let(a,Var(n)) if n == env.length => pretty(a,env)
     case Let(a,b) => s"${indent}(let x${env.length} ${block(pretty(a,env))} ${(pretty(b,env:+("x"+env.length)))})"
