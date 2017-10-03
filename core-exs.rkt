@@ -213,3 +213,6 @@
 (pp-each (acc-trace (term (app
  (let x4 (lam fac (let x3 (lam n1 (let x2 (if n1 (let x (minus n1 (lit 1)) (let x1 (app fac x) (let x (times n1 x1) x))) (lit 1)) x2)) x3)) (let x (fix x4) x))
  (lit 6)))))
+
+(display "Fig. 3. Example of small-step derivation\n")
+(pp-each (acc-trace (term (lift (lam _ x (plus x (times x x)))))))
