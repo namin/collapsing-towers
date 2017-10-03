@@ -56,7 +56,8 @@ object Lisp {
     case Tup(Str("run"),Tup(b,Tup(a,N))) => Run(trans(b,env),trans(a,env))
     case Tup(Str("log"),Tup(b,Tup(a,N))) => Log(trans(b,env),trans(a,env))
     case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
-    // default case: generic app
+    case Tup(Str("trans"),Tup(a,N)) =>
+      Special(benv => Code(trans(evalms(benv, trans(a,env)), env)))
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
   }
 
