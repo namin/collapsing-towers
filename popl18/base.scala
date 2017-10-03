@@ -14,20 +14,18 @@ object Base {
   case class Minus(a:Exp,b:Exp) extends Exp
   case class Times(a:Exp,b:Exp) extends Exp
   case class Equs(a:Exp,b:Exp) extends Exp
-  case class Pair(a:Exp,b:Exp) extends Exp
+  case class Cons(a:Exp,b:Exp) extends Exp
   case class Fst(a:Exp) extends Exp
   case class Snd(a:Exp) extends Exp
   case class IsNum(a:Exp) extends Exp
   case class IsStr(a:Exp) extends Exp
-  case class IsPair(a:Exp) extends Exp
+  case class IsCons(a:Exp) extends Exp
   case class IsCode(b:Exp,a:Exp) extends Exp
-
   case class Lift(e:Exp) extends Exp
-
   case class Run(b:Exp,e:Exp) extends Exp
 
+  // for custom extensions to AST
   case class Special(f:Env => Val) extends Exp
-
 
   type Env = List[Val]
 
@@ -83,14 +81,14 @@ object Base {
       reflect(Minus(anf(env,e1),anf(env,e2)))
     case Equs(e1,e2) =>
       reflect(Equs(anf(env,e1),anf(env,e2)))
-    case Pair(e1,e2) =>
-      reflect(Pair(anf(env,e1),anf(env,e2)))
+    case Cons(e1,e2) =>
+      reflect(Cons(anf(env,e1),anf(env,e2)))
     case IsNum(e) =>
       reflect(IsNum(anf(env,e)))
     case IsStr(e) =>
       reflect(IsStr(anf(env,e)))
-    case IsPair(e) =>
-      reflect(IsPair(anf(env,e)))
+    case IsCons(e) =>
+      reflect(IsCons(anf(env,e)))
     case IsCode(b, e) =>
       reflect(IsCode(anf(env,b),anf(env,e)))
     case Fst(e) =>
@@ -134,7 +132,7 @@ object Base {
       Sym(s)
     case Tup(a,b) =>
       val (Code(u),Code(v)) = (a,b)
-      reflect(Pair(u,v))
+      reflect(Cons(u,v))
     case Clo(env2,e2) => // function
       //println("??" + v)
       stFun collectFirst { case (n,`env2`,`e2`) => n } match {
@@ -221,7 +219,7 @@ object Base {
         case (Code(s1),Code(s2)) =>
           reflectc(Equs(s1,s2))
       }
-    case Pair(e1,e2) =>
+    case Cons(e1,e2) =>
       // introduction form, needs explicit lifting
       Tup(evalms(env,e1),evalms(env,e2))
     case Fst(e1) =>
@@ -253,10 +251,10 @@ object Base {
           Cst(if (v.isInstanceOf[Str]) 1 else 0)
       }
 
-    case IsPair(e1) =>
+    case IsCons(e1) =>
       (evalms(env,e1)) match {
         case (Code(s1)) =>
-          Code(reflect(IsPair(s1)))
+          Code(reflect(IsCons(s1)))
         case v => 
           Cst(if (v.isInstanceOf[Tup]) 1 else 0)
       }
