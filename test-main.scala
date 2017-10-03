@@ -26,8 +26,6 @@ object TestMain {
     testEval()
     testEvalCps()
     testEvalAmb()
-    testDeltaEnv()
-    testDelta()
 
     testMutEval()
     testMutInEval()
