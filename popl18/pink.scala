@@ -241,6 +241,7 @@ object Pink_CPS {
       (if 1 (x3 2) 
       (x3 3)))))""")
 
+    testEM()
   }
 
  def addCases(cs: String*): String = {
@@ -271,8 +272,8 @@ object Pink_CPS {
   val ev0_exp2 = trans(ev0_val,List("arg", "arg2"))
   def testEM() = {
     // sanity checks
-    check(run { evalms(List(fac_val), App(App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lit(4)), Lam(Var(4)))) })("Cst(24)")
+    check(run { evalms(List(fac_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) })("Cst(24)")
 
-    check(run { evalms(List(emt_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(Var(4)))) })("Cst(10)")
+    check(run { evalms(List(emt_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) })("Cst(10)")
   }
 }
