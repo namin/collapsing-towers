@@ -41,18 +41,26 @@ object Lisp {
     // (lambda f x e)
     case Tup(Str("lambda"),Tup(Str(f),Tup(Str(x),Tup(e,N)))) => Lam(trans(e,env:+f:+x))
     case Tup(Str("if"),Tup(c,Tup(a,Tup(b,N)))) => If(trans(c,env),trans(a,env),trans(b,env))
-    case Tup(Str("isNum"),Tup(a,N)) => IsNum(trans(a,env))
-    case Tup(Str("isStr"),Tup(a,N)) => IsStr(trans(a,env))
-    case Tup(Str("isCons"),Tup(a,N)) => IsCons(trans(a,env))
+    case Tup(Str("num?"),Tup(a,N)) => IsNum(trans(a,env))
+    case Tup(Str("sym?"),Tup(a,N)) => IsStr(trans(a,env))
+    case Tup(Str("pair?"),Tup(a,N)) => IsCons(trans(a,env))
     case Tup(Str("cons"),Tup(a,Tup(b,N))) => Cons(trans(a,env),trans(b,env))
     case Tup(Str("car"),Tup(a,N)) => Fst(trans(a,env))
     case Tup(Str("cdr"),Tup(a,N)) => Snd(trans(a,env))
+    case Tup(Str("cadr"),Tup(a,N)) => Fst(Snd(trans(a,env)))
+    case Tup(Str("caddr"),Tup(a,N)) => Fst(Snd(Snd(trans(a,env))))
+    case Tup(Str("cadddr"),Tup(a,N)) => Fst(Snd(Snd(Snd(trans(a,env)))))
     case Tup(Str("lift"),Tup(a,N)) => Lift(trans(a,env))
     case Tup(Str("nolift"),Tup(a,N)) => trans(a,env)
-    case Tup(Str("equs"),Tup(a,Tup(b,N))) => Equs(trans(a,env),trans(b,env))
+    case Tup(Str("eq?"),Tup(a,Tup(b,N))) => Equs(trans(a,env),trans(b,env))
     case Tup(Str("run"),Tup(b,Tup(a,N))) => Run(trans(b,env),trans(a,env))
     case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
     // default case: generic app
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
+  }
+
+  def parseExp(s: String) = {
+    val Success(v, _) = parseAll(exp, s)
+    v
   }
 }

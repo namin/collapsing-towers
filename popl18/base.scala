@@ -174,7 +174,11 @@ object Base {
         case (Code(s1), Code(s2)) =>
           Code(reflect(App(s1,s2)))
         case (r1, r2) =>
-          throw new Exception(s"wrong app: ${r1.toString} ${r2.getClass}")
+          val r2s = r2 match {
+            case Clo(_, _) => r2.getClass.toString
+            case _ => r2.toString
+          }
+          throw new Exception(s"wrong app: ${r1.toString} $r2s")
       }
 
     case If(c,a,b) =>
