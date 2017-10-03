@@ -20,7 +20,6 @@ object Base {
   case class IsNum(a:Exp) extends Exp
   case class IsStr(a:Exp) extends Exp
   case class IsCons(a:Exp) extends Exp
-  case class IsCode(b:Exp,a:Exp) extends Exp
   case class Lift(e:Exp) extends Exp
   case class Run(b:Exp,e:Exp) extends Exp
 
@@ -89,8 +88,6 @@ object Base {
       reflect(IsStr(anf(env,e)))
     case IsCons(e) =>
       reflect(IsCons(anf(env,e)))
-    case IsCode(b, e) =>
-      reflect(IsCode(anf(env,b),anf(env,e)))
     case Fst(e) =>
       reflect(Fst(anf(env,e)))
     case Snd(e) =>
@@ -134,14 +131,11 @@ object Base {
       val (Code(u),Code(v)) = (a,b)
       reflect(Cons(u,v))
     case Clo(env2,e2) => // function
-      //println("??" + v)
       stFun collectFirst { case (n,`env2`,`e2`) => n } match {
         case Some(n) =>
           Var(n)
         case None =>
           stFun :+= (stFresh,env2,e2)
-          //reflect(Lam(reify{ fresh(); val Code(r) = evalms(env2:+(Clo(env2,e2)):+Code(fresh()),e2); r }))
-          // TODO: line above corresponds directly to Scala/LMS. but our intention is to do the right thing for `this` anyways:
           reflect(Lam(reify{ val Code(r) = evalms(env2:+Code(fresh()):+Code(fresh()),e2); r }))
       }
     case Code(e) => reflect(Lift(e))
@@ -257,17 +251,6 @@ object Base {
           Code(reflect(IsCons(s1)))
         case v => 
           Cst(if (v.isInstanceOf[Tup]) 1 else 0)
-      }
-
-    case IsCode(b,e1) =>
-      (evalms(env,b),evalms(env,e1)) match {
-        case (Code(b1),Code(s1)) =>
-          Code(reflect(IsCode(b1, s1)))
-        case (Code(b1), _) =>
-          assert(false) // shouldn't happen
-          Cst(0)
-        case (_, r1) =>
-          Cst(if (r1.isInstanceOf[Code]) 1 else 0)
       }
 
     // special forms: custom eval, ...
