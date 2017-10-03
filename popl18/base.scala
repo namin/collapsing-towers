@@ -21,17 +21,10 @@ object Base {
   case class IsStr(a:Exp) extends Exp
   case class IsPair(a:Exp) extends Exp
   case class IsCode(b:Exp,a:Exp) extends Exp
-  case object Tic extends Exp
-  case class RefNew(e:Exp) extends Exp
-  case class RefRead(a:Exp) extends Exp
-  case class RefWrite(a:Exp,e:Exp) extends Exp
-  case class RefExt(c: Cell) extends Exp
 
   case class Lift(e:Exp) extends Exp
-  case class LiftRef(e:Exp) extends Exp
-  case object Tic2 extends Exp
 
-  case class Eval(b:Exp,e:Exp) extends Exp
+  case class Run(b:Exp,e:Exp) extends Exp
 
   case class Special(f:Env => Val) extends Exp
 
@@ -41,39 +34,10 @@ object Base {
   abstract class Val
   case class Cst(n:Int) extends Val
   case class Str(s:String) extends Val
-  case class Clo(env:Env,e:Exp) extends Val //{ override def toString="CLO"}
+  case class Clo(env:Env,e:Exp) extends Val
   case class Tup(v1:Val,v2:Val) extends Val
-  class Cell(var v: Val) extends Val
 
   case class Code(e:Exp) extends Val
-
-  var stC = 0
-  def tick() = { stC += 1; stC - 1 }
-
-  // regular evaluation (subset)
-  def eval(env: Env, e: Exp): Val = e match {
-    case Lit(n) => Cst(n)
-    case Var(n) => env(n)
-    case App(e1,e2) =>
-      val Clo(env3,e3) = eval(env,e1)
-      val v2 = eval(env,e2)
-      eval(env3:+Clo(env3,e3):+v2,e3)
-    case Lam(e) => Clo(env,e)
-    case Let(e1,e2) => 
-      val v1 = eval(env,e1)
-      eval(env:+v1,e2)
-    case Tic => 
-      Cst(tick())
-    case RefNew(e) =>
-      new Cell(eval(env,e))
-    case RefRead(a) => eval(env,a) match {
-      case (c:Cell) => c.v
-    }
-    case RefWrite(a, e) => eval(env,a) match {
-      case (c:Cell) => c.v = eval(env,e); c
-    }
-    case RefExt(c) => c
-  }
 
   var stFresh = 0
   var stBlock: List[Exp] = Nil
@@ -135,20 +99,8 @@ object Base {
       reflect(Snd(anf(env,e)))
     case Lift(e) =>
       reflect(Lift(anf(env,e)))
-    case LiftRef(e) =>
-      reflect(LiftRef(anf(env,e)))
-    case Eval(b,e) =>
-      reflect(Eval(anf(env,b),reify(anf(env,e))))
-    case Tic => 
-      reflect(Tic)
-    case RefNew(e) =>
-      reflect(RefNew(anf(env,e)))
-    case RefRead(a) =>
-      reflect(RefRead(anf(env,a)))
-    case RefWrite(a, e) =>
-      reflect(RefWrite(anf(env,a),anf(env,e)))
-    case RefExt(c) =>
-      reflect(RefExt(c))
+    case Run(b,e) =>
+      reflect(Run(anf(env,b),reify(anf(env,e))))
     case Special(f) =>
       reflect(Special(f))
   }
@@ -199,27 +151,7 @@ object Base {
       // In this case we would return e. 
       // This seems to imply that we can have only 2 stages.
       // If we would like to support more, we need to return Lift(e)
-    case (c:Cell) => 
-      // Again choices here:
-      // RefExt(c)         -- (like staticData) this inserts a ref to the existing cell, but then how do we generate code to create new refs?
-      // RefNew(lift(c.v)) -- (like var_new) this generates a new ref everytime. should we memoize?
-      val Code(v) = c.v
-      reflect(RefNew(v))
   }
-
-  // by-reference, identity preserving, cross-stage-persistence (like staticData in LMS)
-  def liftRef(v: Val): Exp = v match {
-    case Cst(n) => // number
-      Lit(n)
-    case Str(s) => // string
-      Sym(s)
-    case Code(e) => 
-      LiftRef(e)
-    case (c:Cell) => 
-      RefExt(c)
-    // TODO: support closures (and what else?)
-  }
-
 
   // multi-stage evaluation
   def evalms(env: Env, e: Exp): Val = e match {
@@ -230,37 +162,18 @@ object Base {
     case Let(e1,e2) => 
       val v1 = evalms(env,e1)
       evalms(env:+v1,e2)
-    case Tic => 
-      Cst(tick())
-
-    case RefNew(e) => 
-      // introduction form, needs explicit lifting
-      new Cell(evalms(env,e))
-    case RefRead(a) => evalms(env,a) match {
-      case (c:Cell) => c.v
-      case Code(c1) => reflectc(RefRead(c1))
-    }
-    case RefWrite(a,e) => (evalms(env,a),evalms(env,e)) match {
-      case (c:Cell,v) => c.v = v; c
-      case (Code(c),Code(c1)) => reflectc(RefWrite(c,c1))
-    }
-    case RefExt(c) => c
 
     case Lift(e) => 
       Code(lift(evalms(env,e)))
-    case LiftRef(e) => 
-      Code(liftRef(evalms(env,e)))
-    case Eval(b,e) =>
+
+    case Run(b,e) =>
       evalms(env,b) match {
         case Code(b1) =>
-          reflectc(Eval(b1, reifyc(evalms(env,e))))
+          reflectc(Run(b1, reifyc(evalms(env,e))))
         case _ =>
           val code = reifyc(evalms(env, e))
           reifyv(evalms(env, code))
       }
-
-    case Tic2 => 
-      Code(reflect(Tic))
 
     case App(e1,e2) =>
       (evalms(env,e1), evalms(env,e2)) match {
@@ -389,9 +302,6 @@ object Base {
     case Let(a,b) => s"${indent}let x${env.length} = ${block(pretty(a,env))} in ${(pretty(b,env:+("x"+env.length)))}"
     case Lam(e) => s"${indent}fun f${env.length} x${env.length+1} ${block(pretty(e,env:+("f"+env.length):+("x"+(env.length+1))))}"
     case If(c,a,b) => s"${indent}if (${pretty(c,env)}) ${block(pretty(a,env))} ${indent}else ${block(pretty(b,env))}"
-    case RefNew(a) => s"refNew(${pretty(a,env)})"
-    case RefRead(a) => s"${pretty(a,env)}!"
-    case RefWrite(a,b) => s"(${pretty(a,env)} := ${pretty(b,env)})"
     case _ => e.toString
   }
 
@@ -402,129 +312,4 @@ object Base {
     println("    "+a)
     (new AssertionError).printStackTrace
   }
-
-
-  def testBasic() = {
-    println("// ------- basic tests --------")
-
-    val p = App(Lam(Let(Tic,Let(Tic,Var(1)))),Lit(3))
-    check(p)("App(Lam(Let(Tic,Let(Tic,Var(1)))),Lit(3))")
-
-    check(eval(Nil,p))("Cst(3)")
-
-    val p2 = reify(anf(Nil,p))
-    check(p2)("Let(Lam(Let(Tic,Let(Tic,Var(1)))),Let(App(Var(0),Lit(3)),Var(1)))")
-
-    check(eval(Nil,p2))("Cst(3)")
-  }
-
-  def testAck1() = {
-    println("// ------- ackermann 1 --------")
-    val a = Var(0)
-    val m = Var(1)
-    val n = Var(3)
-    val m_sub_1 = Minus(m,Lit(1))
-    val n_sub_1 = Minus(n,Lit(1))
-    val n_add_1 = Plus(n,Lit(1))
-
-/*
-  def a(m: Int): Rep[Int => Int] = fun { (n: Rep[Int]) =>
-    if (m==0) n+1
-    else if (n==0) a(m-1)(1)
-    else a(m-1)(a(m)(n-1))
-  }
-*/    
-    val ackN = Lam(Lam(
-                If(m,
-                  If(n,App(App(a,m_sub_1),App(App(a,m),n_sub_1)),
-                       App(App(a,m_sub_1),Lit(1))),
-                  n_add_1)))
-    check(evalms(Nil,App(App(ackN,Lit(2)),Lit(2))))("Cst(7)")
-
-  }
-    
-
-  def testAck2() = {
-    println("// ------- ackermann 2 --------")
-    val a = Var(0)
-    val m = Var(1)
-    val n = Var(3)
-    val m_sub_1 = Minus(m,Lit(1))
-    val n_sub_1 = Minus(n,Lift(Lit(1)))
-    val n_add_1 = Plus(n,Lift(Lit(1)))
-
-/*
-  def a(m: Int): Rep[Int => Int] = fun { (n: Rep[Int]) =>
-    if (m==0) n+1
-    else if (n==0) a(m-1)(1)
-    else a(m-1)(a(m)(n-1))
-  }
-*/    
-
-    val ackN = Lam(Lift(Lam(
-                If(m,
-                  If(n,App(App(a,m_sub_1),App(App(a,m),n_sub_1)),
-                       App(App(a,m_sub_1),Lift(Lit(1)))),
-                  n_add_1))))
-    val code = reifyc(evalms(Nil,App(App(ackN,Lit(2)),Lift(Lit(2)))))
-
-    val out = 
-      Let(Lam(
-        Let(If(Var(1),
-          Let(Lam(Let(If(Var(3),
-            Let(Lam(Let(Plus(Var(5),Lit(1)),Var(6))),Let(Minus(Var(3),Lit(1)),Let(App(Var(2),Var(5)),Let(App(Var(4),Var(6)),Var(7))))),
-            Let(Lam(Let(Plus(Var(5),Lit(1)),Var(6))),Let(App(Var(4),Lit(1)),Var(5)))
-            ),Var(4))),Let(Minus(Var(1),Lit(1)),Let(App(Var(0),Var(3)),Let(App(Var(2),Var(4)),Var(5))))),
-          Let(Lam(Let(If(Var(3),
-            Let(Lam(Let(Plus(Var(5),Lit(1)),Var(6))),Let(Minus(Var(3),Lit(1)),Let(App(Var(2),Var(5)),Let(App(Var(4),Var(6)),Var(7))))),
-            Let(Lam(Let(Plus(Var(5),Lit(1)),Var(6))),Let(App(Var(4),Lit(1)),Var(5)))
-            ),Var(4))),Let(App(Var(2),Lit(1)),Var(3)))
-          ),Var(2))),Let(App(Var(0),Lit(2)),Var(1)))
-
-    check(code)(out.toString)
-
-    check(evalms(Nil,code))("Cst(7)")
-  }
-
-
-  def testFac1() = {
-    println("// ------- factorial 1 --------")
-    val f_self = App(Var(0),Lit(99))
-    val n = Var(3)
-
-/*
-  pattern:
-    
-    def f = fun { n => if (n != 0) f(n-1) else 1 }
-
-  corresponds to:
-
-    val f = { () => lift({ n => if (n != 0) f()(n-1) else 1 }) }
-
-*/
-
-    val fac_body = Lam(If(n,Times(n,App(f_self,Minus(n,Lift(Lit(1))))),Lift(Lit(1))))
-
-    val fac = App(Lam(Lift(fac_body)),Lit(99))
-
-    val code = reifyc(evalms(Nil,fac))
-
-    val out = 
-      Let(Lam(
-        Let(If(Var(1),
-              Let(Minus(Var(1),Lit(1)),
-              Let(App(Var(0),Var(2)),
-              Let(Times(Var(1),Var(3)),
-              Var(4)))),
-            /* else */
-              Lit(1)
-        ),
-        Var(2))),
-      Var(0))
-
-    check(code)(out.toString)
-
-    check(evalms(Nil,App(code,Lit(4))))("Cst(24)")
-  }
-
 }
