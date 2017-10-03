@@ -17,7 +17,7 @@ object Pink {
 (lambda _ maybe-lift (lambda tie eval (lambda _ exp (lambda _ env
   (if (num?                exp)    (maybe-lift exp)
   (if (sym?                exp)    (env exp)
-  (if (sym?           (car exp))   
+  (if (sym?           (car exp))
     (if (eq?  '+      (car exp))   (+   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
     (if (eq?  '-      (car exp))   (-   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
     (if (eq?  '*      (car exp))   (*   ((eval (cadr exp)) env) ((eval (caddr exp)) env))
@@ -174,7 +174,7 @@ object Pink_CPS {
 (lambda _ maybe-lift (lambda _ eval (lambda _ exp (lambda _ env (lambda _ k
   (if (num?                exp)    (k (maybe-lift exp))
   (if (sym?                exp)    (k (env exp))
-  (if (sym?           (car exp))   
+  (if (sym?           (car exp))
     (if (eq?  '+      (car exp))   (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (+ v1 v2))))))
     (if (eq?  '-      (car exp))   (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (- v1 v2))))))
     (if (eq?  '*      (car exp))   (((eval (cadr exp)) env) (lambda _ v1 (((eval (caddr exp)) env) (lambda _ v2 (k (* v1 v2))))))
@@ -275,5 +275,125 @@ object Pink_CPS {
     check(run { evalms(List(fac_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) })("Cst(24)")
 
     check(run { evalms(List(emt_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) })("Cst(10)")
+  }
+}
+
+// Section 5.2 Compiling under Persistent Semantic Modifications
+object Pink_clambda {
+  val ev_poly_src = """
+(lambda tie eval (lambda _ l (lambda _ exp (lambda _ env
+  (if (num?                exp)    ((car l) exp)
+  (if (sym?                exp)    (env exp)
+  (if (sym?           (car exp))
+    (if (eq?  '+      (car exp))   (+   (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  '-      (car exp))   (-   (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  '*      (car exp))   (*   (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  'eq?    (car exp))   (eq? (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  'if     (car exp))   (if  (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env) (((eval l) (cadddr exp)) env))
+    (if (if (eq? 'lambda (car exp)) 1 (if (eq? 'clambda (car exp)) (cdr l) 0)) ((car l) (lambda f x (((eval l) (cadddr exp))
+      (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
+    (if (eq? 'clambda (car exp))       (exec 0 (((eval (cons (lambda _ e (lift e)) 1)) (cons 'lambda (cdr exp)))  (lambda _ y (lift-ref (env y)))))
+    (if (eq?  'let    (car exp))   (let x (((eval l) (caddr exp)) env) (((eval l) (cadddr exp))
+      (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
+    (if (eq?  'lift   (car exp))   (lift (((eval l) (cadr exp)) env))
+    (if (eq? 'lift-ref (car exp))  (lift-ref (((eval l) (cadr exp)) env))
+    (if (eq?  'num?   (car exp))   (num? (((eval l) (cadr exp)) env))
+    (if (eq?  'sym?   (car exp))   (sym? (((eval l) (cadr exp)) env))
+    (if (eq?  'pair?  (car exp))   (pair? (((eval l) (cadr exp)) env))
+    (if (eq?  'car    (car exp))   (car  (((eval l) (cadr exp)) env))
+    (if (eq?  'cdr    (car exp))   (cdr  (((eval l) (cadr exp)) env))
+    (if (eq?  'cons   (car exp))   ((car l) (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
+    (if (eq?  'quote  (car exp))   ((car l) (cadr exp))
+    (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  'run    (car exp))   (run (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
+    (if (eq?  'EM     (car exp))   (run ((car l) 0) (trans (car (cdr exp))))
+    (if (eq?  'trans (car exp))   (trans (cadr exp))
+    ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))))))
+  ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
+"""
+
+  val ev_tie_src = s"""(lambda eval l (lambda _ e ((($ev_poly_src eval) l) e)))"""
+  val ev_src = s"""($ev_tie_src (cons (lambda _ e e) 0))"""
+  val evc_src = s"""($ev_tie_src (cons (lambda _ e (lift e)) 1))"""
+  val fc_src = fac_src.replace("lambda", "clambda")
+  val fc_val = parseExp(fc_src)
+
+  val ev_val = parseExp(ev_src)
+  val ev_exp1 = trans(ev_val, List("arg1"))
+
+  val evc_val = parseExp(evc_src)
+  val evc_exp1 = trans(evc_val, List("arg1"))
+
+  def test_clambda() = {
+    val r1 = run { evalms(List(fc_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
+    check(r1)("Cst(24)")
+    val c1 = (run { evalms(List(fc_val), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }).asInstanceOf[Clo]
+    check(c1.env)("List()")
+    check(pretty(c1.e, List("r", "n")))("""(if n 
+  (let x2 (- n 1) 
+  (let x3 (r x2) (* n x3))) 
+1)""") // all interpretation overhead is gone
+
+    val c2_val = parseExp("(lambda _ x (clambda _ y (* (+ x x) y)))")
+    val r2 = run { evalms(List(c2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    check(r2)("Cst(8)")
+
+    val c3_val = parseExp("(clambda _ x (lambda _ y (* (+ x x) y)))")
+    val r3 = run { evalms(List(c3_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    check(r3)("Cst(8)")
+
+    val c4_val = parseExp("(clambda _ x (clambda _ y (* (+ x x) y)))")
+    val r4 = run { evalms(List(c4_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) }
+    check(r4)("Cst(8)")
+
+    val c5_val = parseExp("(let inc (lambda _ x (+ x 1)) (clambda _ y (inc y)))")
+    val r5 = run { evalms(List(c5_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) }
+    check(r5)("Cst(5)")
+
+    val c6_val = parseExp("(lambda _ x (clambda _ y (lambda _ l (* (l (+ x x)) (l y)))))")
+    val r6 = run { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) }
+    val c6 = (run { evalms(List(c6_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1))) }).asInstanceOf[Clo]
+    check(r6)("Cst(8)")
+    val c7 = reifyc { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
+    check(pretty(c7, Nil))("(* 2 4)")
+  }
+
+  def test_em() {
+    val oldLog = log
+    var s = ""
+    log = {x => s += x.toString+";" }
+
+    val ev_log_src = ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log ((car l) 0) (env exp)) (env exp))")
+    val v1 = run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '($fac_src 4)) env))")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(v1)("Cst(24)")
+    check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+    s = ""
+
+    val v2 = run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '(${fac_src.replace("lambda", "clambda")} 4)) env))")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(v2)("Cst(24)")
+    check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+    s = ""
+
+    val v3 = run { evalms(List(parseExp(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    (if (if (sym? exp) (eq? 'n exp) 0) (log ((car l) 0) (((eval l) exp) env))
+    ((((tie ev) l) exp) env))))) l) '($fac_src 4)) env))""")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(v3)("Cst(24)")
+    check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+    s = ""
+
+    val v4 = run { evalms(List(parseExp(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    (if (if (sym? exp) (eq? 'n exp) 0) (log ((car l) 0) (((eval l) exp) env))
+    ((((tie ev) l) exp) env))))) l) '(${fac_src.replace("lambda", "clambda")} 4)) env))""")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) }
+    check(v4)("Cst(24)")
+    check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+    s = ""
+
+    log = oldLog
+  }
+
+  def test() = {
+    test_clambda()
+    test_em()
   }
 }
