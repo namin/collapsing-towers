@@ -38,7 +38,9 @@ object Pink {
     (if (eq?  'cons   (car exp))   (maybe-lift (cons ((eval (cadr exp)) env) ((eval (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   (maybe-lift (cadr exp))
     (if (eq?  'pair?  (car exp))   (pair? ((eval (cadr exp)) env))
-    ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))))))
+    (if (eq?  'run    (car exp))   (run ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+    (if (eq?  'log    (car exp))   (log ((eval (cadr exp)) env) ((eval (caddr exp)) env))
+    ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))))))))
   (((eval (car exp)) env) ((eval (cadr exp)) env)))))))))
 """
 
