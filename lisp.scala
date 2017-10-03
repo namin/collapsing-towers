@@ -204,19 +204,6 @@ ${eval_poly_src.replace("(env exp)", "(let _ (if (equs 'n exp) (refWrite c (+ (r
 )
 """
 
-  /*
-   How to do JIT: 
-    - essence: self-modifying code
-    - each function has state, can go from interp -> compiled
-
-   Question:
-    - our granularity is lambda, but e.g. jvm granularity is method/code block
-    - we would like to compile a piece of code in the program, instead of 
-      recompile same code for each fresh runtime instance of a lambda
-
-
-  */
-
   // so far, we support only one level of EM
   val eval_em_poly_src = eval_poly_src.replace("'em-not-supported","(exec/env 0 (trans-quote/env (car (cdr exp))))")
   val eval_em_cps_poly_src = eval_cps_poly_src.replace("'em-not-supported","(exec/env 0 (trans-quote/env (car (cdr exp))))")
