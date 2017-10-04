@@ -56,6 +56,8 @@ object Pink {
   val evc_exp1 = trans(evc_val, List("arg1"))
   val evc_exp_anf = reify { anf(List(Sym("XX")),evc_exp1) }
 
+  val eval_src = s"(lambda _ e (($ev_src e) 'nil-env))"
+
   def test() = {
     testCorrectnessOptimality()
     testInstrumentation()
@@ -74,31 +76,35 @@ object Pink {
     // direct execution
     checkrun(s"""
     (let fac $fac_src 
-    (fac 4))""", 
+    (fac 4))""",
     "Cst(24)")
 
-
     // interpretation
-    // ((eval fac-src) 4) ;; => 24
-    check(run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) })("Cst(24)")
-
     checkrun(s"""
-    (let eval          (lambda _ e (($ev_src e) 'nil-env))
-    (let fac_val       (quote $fac_src)
-    (let fac           (eval fac_val)
-    (fac 4))))""", 
+    (let eval          $eval_src
+    (let fac_src       (quote $fac_src)
+
+    ((eval fac_src) 4)))""",
     "Cst(24)")
 
 
     // double interpretation
-    // (((eval eval-src) fac-src) 4) ;; => 24
-    check(run { evalms(List(fac_val,ev_val), App(App(App(App(App(
-      ev_exp2,Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2")), Lit(4))) })("Cst(24)")
+    checkrun(s"""
+    (let eval          $eval_src
+    (let fac_src       (quote $fac_src)
+    (let eval_src      (quote $eval_src)
+
+    (((eval eval_src) fac_src) 4))))""",
+    "Cst(24)")
 
     // triple interpretation
-    // ((((eval eval-src) eval-src) fac-src) 4) ;; => 24
-    check(run { evalms(List(fac_val,ev_val), App(App(App(App(App(App(App(
-      ev_exp2,Var(1)),Sym("nil-env")), Var(1)), Sym("nil-env2")), Var(0)), Sym("nil-env3")), Lit(4))) })("Cst(24)")
+    checkrun(s"""
+    (let eval          $eval_src
+    (let fac_src       (quote $fac_src)
+    (let eval_src      (quote $eval_src)
+
+    ((((eval eval_src) eval_src) fac_src) 4))))""",
+    "Cst(24)")
 
     // compilation
     // (evalc fac-src) ;; => <code for fac>
