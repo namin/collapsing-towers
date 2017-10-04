@@ -63,9 +63,32 @@ object Pink {
   }
 
   def testCorrectnessOptimality() = {
+    def checkrun(src: String, dst: String) = {
+      val prog_src = s"""(let exec-quote (lambda _ src (exec (trans-quote src))) $src)"""
+      val prog_val = parseExp(prog_src)
+      val prog_exp = trans(prog_val,Nil)
+      val res = reifyv(evalms(Nil,prog_exp))
+      check(res)(dst)
+    }
+
+    // direct execution
+    checkrun(s"""
+    (let fac $fac_src 
+    (fac 4))""", 
+    "Cst(24)")
+
+
     // interpretation
     // ((eval fac-src) 4) ;; => 24
     check(run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lit(4))) })("Cst(24)")
+
+    checkrun(s"""
+    (let eval          (lambda _ e (($ev_src e) 'nil-env))
+    (let fac_val       (quote $fac_src)
+    (let fac           (eval fac_val)
+    (fac 4))))""", 
+    "Cst(24)")
+
 
     // double interpretation
     // (((eval eval-src) fac-src) 4) ;; => 24

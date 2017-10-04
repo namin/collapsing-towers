@@ -61,6 +61,8 @@ object Lisp {
     case Tup(Str("run"),Tup(b,Tup(a,N))) => Run(trans(b,env),trans(a,env))
     case Tup(Str("log"),Tup(b,Tup(a,N))) => Log(trans(b,env),trans(a,env))
     case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
+    case Tup(Str("exec"),Tup(a,N)) => 
+      Special(benv => evalms(Nil, reifyc(evalms(benv, trans(a,env)))))
     case Tup(Str("exec"),Tup(b,Tup(a,N))) =>
       // Note: the only difference with Run is that we use Nil instead of benv
       //   below for second run.
