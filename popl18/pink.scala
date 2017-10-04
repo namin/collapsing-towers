@@ -47,25 +47,12 @@ object Pink {
   def ev_lift(src: String) = s"(lambda eval e ((($src (lambda _ e (lift e))) eval) e))"
   def ev_nil(src: String) = s"(lambda _ e (($src e) 'nil-env))"
 
-  val ev_src = ev_nolift(ev_poly_src)
-  val evc_src = ev_lift(ev_poly_src)
-
-  val ev_val = parseExp(ev_src)
-  val ev_exp1 = trans(ev_val, List("arg1"))
-  val ev_exp2 = trans(ev_val, List("arg1", "arg2"))
-  val ev_exp3 = trans(ev_val, List("arg1", "arg2", "arg3"))
-  val ev_exp_anf = reify { anf(List(Sym("XX")),ev_exp1) }
-
-  val eval_src = ev_nil(ev_src)
-  val evalc_src = ev_nil(evc_src)
+  val eval_src = ev_nil(ev_nolift(ev_poly_src))
+  val evalc_src = ev_nil(ev_lift(ev_poly_src))
 
   val eval_val = parseExp(eval_src)
   val eval_exp1 = trans(eval_val, List("arg1"))
   val eval_exp_anf = reify { anf(List(Sym("XX")),eval_exp1) }
-
-  val evc_val = parseExp(evc_src)
-  val evc_exp1 = trans(evc_val, List("arg1"))
-  val evc_exp_anf = reify { anf(List(Sym("XX")),evc_exp1) }
 
   val evalc_val = parseExp(evalc_src)
   val evalc_exp1 = trans(evalc_val, List("arg1"))
@@ -221,7 +208,6 @@ object Pink {
   val evn_val = parseExp(evn_src)
   val emt_val = parseExp(emt_src)
   val ev0_exp1 = trans(ev0_val,List("arg"))
-  val ev0_exp2 = trans(ev0_val,List("arg", "arg2"))
   def testEM() = {
     // sanity checks
     checkrun(s"""
@@ -347,7 +333,6 @@ object Pink_CPS {
   val evn_val = parseExp(evn_src)
   val emt_val = parseExp(emt_src)
   val ev0_exp1 = trans(ev0_val,List("arg"))
-  val ev0_exp2 = trans(ev0_val,List("arg", "arg2"))
   def testEM() = {
     // sanity check
     check(run { evalms(List(fac_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) })("Cst(24)")
