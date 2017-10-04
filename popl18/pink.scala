@@ -43,6 +43,8 @@ object Pink {
   (((eval (car exp)) env) ((eval (cadr exp)) env)))))))))
 """
 
+  def ev_nil(src: String) = s"(lambda _ e (($src e) 'nil-env))"
+
   val ev_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e e)) eval) e))"""
   val evc_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e (lift e))) eval) e))"""
 
@@ -52,8 +54,8 @@ object Pink {
   val ev_exp3 = trans(ev_val, List("arg1", "arg2", "arg3"))
   val ev_exp_anf = reify { anf(List(Sym("XX")),ev_exp1) }
 
-  val eval_src = s"(lambda _ e (($ev_src e) 'nil-env))"
-  val evalc_src = s"(lambda _ e (($evc_src e) 'nil-env))"
+  val eval_src = ev_nil(ev_src)
+  val evalc_src = ev_nil(evc_src)
 
   val eval_val = parseExp(eval_src)
   val eval_exp1 = trans(eval_val, List("arg1"))
@@ -167,12 +169,15 @@ object Pink {
 
   val evt_poly_src = ev_poly_src.replace("(env exp)", "(if (eq? 'n exp) (log (maybe-lift 0) (env exp)) (env exp))")
   val evtc_src = s"""(lambda eval e ((($evt_poly_src (lambda _ e (lift e))) eval) e))"""
+  val trace_n_evalc_src = ev_nil(evtc_src)
   val evtc_val = parseExp(evtc_src)
   val evtc_exp1 = trans(evtc_val, List("arg1"))
   def testInstrumentation() = {
-    // (trace-n-evalc fac-src) ;; => <code of fac with extra log calls >
-    val fact_exp = reifyc { evalms(List(fac_val),App(App(evtc_exp1,Var(0)),Sym("nil-env"))) }
-    check(pretty(fact_exp, Nil))("""(lambda f0 x1 
+    val fact_exp = checkcode(s"""
+    (let trace_n_evalc $trace_n_evalc_src
+    (let fac_src       (quote $fac_src)
+    (trace_n_evalc fac_src)))""",
+    """(lambda f0 x1 
   (let x2 (log 0 x1) 
   (if x2 
     (let x3 (log 0 x1) 
