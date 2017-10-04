@@ -413,15 +413,15 @@ object Pink_clambda {
   def test_em() {
     val ev_log_src = ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log ((car l) 0) (env exp)) (env exp))")
     val fac4_trace = "Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);"
-    checkrunlog(s"($eval_src '(EM ((($ev_log_src l) '($fac_src 4)) env)))", "Cst(24)", fac4_trace)
-    checkrunlog(s"($eval_src '(EM ((($ev_log_src l) '($fc_src 4)) env)))", "Cst(24)", fac4_trace)
-    checkrunlog(s"""($eval_src '(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    def em1(src: String) = s"(EM ((($ev_log_src l) '($src 4)) env))"
+    def em2(src: String) = s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
     (if (if (sym? exp) (eq? 'n exp) 0) (log ((car l) 0) (((eval l) exp) env))
-    ((((tie ev) l) exp) env))))) l) '($fac_src 4)) env)))""", "Cst(24)", fac4_trace)
-    checkrunlog(s"""($eval_src '(EM ((((lambda ev l (lambda _ exp (lambda _ env
-    (if (if (sym? exp) (eq? 'n exp) 0) (log ((car l) 0) (((eval l) exp) env))
-    ((((tie ev) l) exp) env))))) l) '($fc_src  4)) env)))""",
-    "Cst(24)", fac4_trace)
+    ((((tie ev) l) exp) env))))) l) '($src 4)) env))"""
+
+    checkrunlog(s"($eval_src '${em1(fac_src)})", "Cst(24)", fac4_trace)
+    checkrunlog(s"($eval_src '${em1(fc_src)})" , "Cst(24)", fac4_trace)
+    checkrunlog(s"($eval_src '${em2(fac_src)})", "Cst(24)", fac4_trace)
+    checkrunlog(s"($eval_src '${em2(fc_src)})" , "Cst(24)", fac4_trace)
   }
 
   def test() = {
