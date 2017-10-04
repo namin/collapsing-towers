@@ -69,15 +69,16 @@
        ,(l `(lit 1))))))
 
 
-;(pp-each (acc-trace (term (app ,(facl (lambda (x) x)) (lit 3)))))
-;(pp-each (acc-trace (term (app (app ,(evl (lambda (x) x)) (lit 3)) (lam _ y y)))))
-;(last (acc-trace (term (app (app ,(evl (lambda (x) x)) ,(quotify (term (lit 3)))) (lam _ y y)))))
-;(iter-eval (term (app (app ,(evl (lambda (x) x)) ,(quotify (term (plus (lit 1) (lit 2))))) (lam _ y y))))
-;(iter-eval (term (app (app ,(evl (lambda (x) x)) ,(quotify (term (app (lam _ x (plus (lit 1) x)) (lit 2))))) (lam _ y y))))
+(test-equal (iter-eval (term (app ,(facl (lambda (x) x)) (lit 3)))) (term (lit 6)))
+(test-equal (iter-eval (term (app (app ,(evl (lambda (x) x)) (lit 3)) (lam _ y y)))) (term (lit 3)))
+(test-equal (iter-eval (term (app (app ,(evl (lambda (x) x)) ,(quotify (term (lit 3)))) (lam _ y y)))) (term (lit 3)))
+(test-equal (iter-eval (term (app (app ,(evl (lambda (x) x)) ,(quotify (term (plus (lit 1) (lit 2))))) (lam _ y y)))) (term (lit 3)))
+(test-equal (iter-eval (term (app (app ,(evl (lambda (x) x)) ,(quotify (term (app (lam _ x (plus (lit 1) x)) (lit 2))))) (lam _ y y)))) (term (lit 3)))
 ;(iter-eval (term (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (term (lam _ x (plus (lit 1) x))))) (lam _ y y))))
-;(iter-eval (term (app (run (lit 0) (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (term (lam _ x (plus (lit 1) x))))) (lam _ y y))) (lit 2))))
+(test-equal (iter-eval (term (app (run (lit 0) (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (term (lam _ x (plus (lit 1) x))))) (lam _ y y))) (lit 2)))) (term (lit 3)))
 ;(iter-eval (term (app (run (lift (lit 0)) (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (term (lam _ x (plus (lit 1) x))))) (lam _ y y))) (lit 2))))
-;(iter-eval (term (app (run (lit 0) (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (facl (lambda (x) x)))) (lam _ y y))) (lit 3))))
+(test-equal (iter-eval (term (app (run (lit 0) (app (app ,(evl (lambda (x) `(lift ,x))) ,(quotify (facl (lambda (x) x)))) (lam _ y y))) (lit 3)))) (term (lit 6)))
 
+(display "\n")
 (display "Fig. 3. Example of small-step derivation\n")
 (pp-each (acc-trace (term (lift (lam _ x (plus x (times x x)))))))
