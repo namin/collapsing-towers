@@ -52,11 +52,20 @@ object Pink {
   val ev_exp3 = trans(ev_val, List("arg1", "arg2", "arg3"))
   val ev_exp_anf = reify { anf(List(Sym("XX")),ev_exp1) }
 
+  val eval_src = s"(lambda _ e (($ev_src e) 'nil-env))"
+  val evalc_src = s"(lambda _ e (($evc_src e) 'nil-env))"
+
+  val eval_val = parseExp(eval_src)
+  val eval_exp1 = trans(eval_val, List("arg1"))
+  val eval_exp_anf = reify { anf(List(Sym("XX")),eval_exp1) }
+
   val evc_val = parseExp(evc_src)
   val evc_exp1 = trans(evc_val, List("arg1"))
   val evc_exp_anf = reify { anf(List(Sym("XX")),evc_exp1) }
 
-  val eval_src = s"(lambda _ e (($ev_src e) 'nil-env))"
+  val evalc_val = parseExp(evalc_src)
+  val evalc_exp1 = trans(evalc_val, List("arg1"))
+  val evalc_exp_anf = reify { anf(List(Sym("XX")),evalc_exp1) }
 
   def test() = {
     testCorrectnessOptimality()
@@ -71,6 +80,7 @@ object Pink {
       val prog_exp = trans(prog_val,Nil)
       val res = reifyv(evalms(Nil,prog_exp))
       check(res)(dst)
+      res
     }
 
     // direct execution
@@ -107,23 +117,58 @@ object Pink {
     "Cst(24)")
 
     // compilation
-    // (evalc fac-src) ;; => <code for fac>
-    val c1 = reifyc { evalms(List(fac_val),App(App(evc_exp1,Var(0)),Sym("nil-env"))) }
-    check(c1)(fac_exp_anf.toString)
-    // ((run 0 (evalc fac-src)) 4) ;; => 24
-    check(run { evalms(Nil,App(c1,Lit(4))) })("Cst(24)")
+    checkrun(s"""
+    (let evalc         $evalc_src
+    (let fac_src       (quote $fac_src)
+
+    (evalc fac_src)))""",
+    Code(fac_exp_anf).toString)
+
+    checkrun(s"""
+    (let evalc         $evalc_src
+    (let fac_src       (quote $fac_src)
+
+    ((exec (evalc fac_src)) 4)))""",
+    "Cst(24)")
+    // TODO with paper: ((run 0 (evalc fac-src)) 4) ;; => 24
+    // run 0 != exec, due to enclsoing environment
 
     // optimality: verify collapse
     // ((eval evalc-src) fac-src) ;; => <code for fac>
-    check(reifyc { evalms(List(fac_val,evc_val), App(App(App(App(ev_exp2,Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2"))) })(fac_exp_anf.toString)
+    checkrun(s"""
+    (let eval          $eval_src
+    (let evalc_src     (quote $evalc_src)
+    (let fac_src       (quote $fac_src)
+
+    ((eval evalc_src) fac_src))))""",
+    Code(fac_exp_anf).toString)
     // ((eval evalc-src) eval-src) ;; => <code for eval>
-    check(reifyc { evalms(List(ev_val,evc_val), App(App(App(App(ev_exp2,Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2"))) })(ev_exp_anf.toString)
-    // ((eval evalc-src) evalc-src) ;; => <code for eval>
-    check(reifyc { evalms(List(evc_val,evc_val), App(App(App(App(ev_exp2,Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2"))) })(evc_exp_anf.toString)
+    checkrun(s"""
+    (let eval          $eval_src
+    (let evalc_src     (quote $evalc_src)
+    (let eval_src      (quote $eval_src)
+
+    ((eval evalc_src) eval_src))))""",
+    Code(eval_exp_anf).toString)
+    // ((eval evalc-src) evalc-src) ;; => <code for evalc>
+    checkrun(s"""
+    (let eval          $eval_src
+    (let evalc_src     (quote $evalc_src)
+
+    ((eval evalc_src) evalc_src)))""",
+    Code(evalc_exp_anf).toString)
     // further tower
     // (((eval eval-src) evalc-src) fac-src) ;; => <code for fac>
-    check(reifyc { evalms(List(fac_val,evc_val, ev_val), App(App(App(App(App(App(ev_exp3,Var(2)), Sym("nil-env0")), Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2"))) })(fac_exp_anf.toString)
+    checkrun(s"""
+    (let eval          $eval_src
+    (let eval_src      (quote $eval_src)
+    (let evalc_src     (quote $evalc_src)
+    (let fac_src       (quote $fac_src)
 
+    (((eval eval_src) evalc_src) fac_src)))))""",
+    Code(fac_exp_anf).toString)
+
+    // left of Figure 6
     check(pretty(fac_exp_anf, Nil))("""(lambda f0 x1 
   (if x1 
     (let x2 (- x1 1) 
