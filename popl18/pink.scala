@@ -43,10 +43,12 @@ object Pink {
   (((eval (car exp)) env) ((eval (cadr exp)) env)))))))))
 """
 
+  def ev_nolift(src: String) = s"(lambda eval e ((($src (lambda _ e e)) eval) e))"
+  def ev_lift(src: String) = s"(lambda eval e ((($src (lambda _ e (lift e))) eval) e))"
   def ev_nil(src: String) = s"(lambda _ e (($src e) 'nil-env))"
 
-  val ev_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e e)) eval) e))"""
-  val evc_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e (lift e))) eval) e))"""
+  val ev_src = ev_nolift(ev_poly_src)
+  val evc_src = ev_lift(ev_poly_src)
 
   val ev_val = parseExp(ev_src)
   val ev_exp1 = trans(ev_val, List("arg1"))
@@ -168,7 +170,7 @@ object Pink {
   }
 
   val evt_poly_src = ev_poly_src.replace("(env exp)", "(if (eq? 'n exp) (log (maybe-lift 0) (env exp)) (env exp))")
-  val evtc_src = s"""(lambda eval e ((($evt_poly_src (lambda _ e (lift e))) eval) e))"""
+  val evtc_src = ev_lift(evt_poly_src)
   val trace_n_evalc_src = ev_nil(evtc_src)
   val evtc_val = parseExp(evtc_src)
   val evtc_exp1 = trans(evtc_val, List("arg1"))
@@ -206,8 +208,11 @@ object Pink {
   val evn_poly_src = addCases(
     "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
 
-  val ev0_src = s"""(lambda eval e ((($ev0_poly_src (lambda _ e e)) eval) e))"""
-  val evn_src = s"""(lambda eval e ((($evn_poly_src (lambda _ e e)) eval) e))"""
+  val ev0_src = ev_nolift(ev0_poly_src)
+  val evn_src = ev_nolift(evn_poly_src)
+
+  val eval0_src = ev_nil(ev0_src)
+  val evaln_src = ev_nil(evn_src)
 
   val emt_src = """((EM (((lambda ev exp (lambda _ env
      (if (if (sym? exp) (eq? 'n exp) 0) (log 0 ((eval exp) env)) (((tie ev) exp) env))))
@@ -219,19 +224,29 @@ object Pink {
   val ev0_exp2 = trans(ev0_val,List("arg", "arg2"))
   def testEM() = {
     // sanity checks
-    check(run { evalms(List(fac_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lit(4))) })("Cst(24)")
-    check(run { evalms(List(fac_val,evn_val), App(App(App(App(App(ev0_exp2,Var(1)),Sym("nil-env")), Var(0)), Sym("nil-env2")), Lit(4))) })("Cst(24)")
+    checkrun(s"""
+    (let eval0     $eval0_src
+    (let fac_src   (quote $fac_src)
+    ((eval0 fac_src) 4)))""", "Cst(24)")
+    checkrun(s"""
+    (let eval0     $eval0_src
+    (let evaln_src (quote $evaln_src)
+    (let fac_src   (quote $fac_src)
+    (((eval0 evaln_src) fac_src) 4))))""", "Cst(24)")
 
     // Section 5.1.2 -- Modifying the Tower Structure
-    val oldLog = log
-    var s = ""
-    log = {x => s += x.toString+";" }
-    check(run { evalms(List(emt_val), App(App(ev0_exp1, Var(0)), Sym("nil-env"))) })("Cst(6)")
-    check(s)("Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
-    s = ""
-    check(run { evalms(List(emt_val, evn_val), App(App(App(App(ev0_exp2, Var(1)), Sym("nil-env")), Var(0)), Sym("nil-env2"))) })("Cst(6)")
-    check(s)("Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
-    log = oldLog
+    checkrunlog(s"""
+    (let eval0     $eval0_src
+    (let emt_src   (quote $emt_src)
+    (eval0 emt_src)))""", "Cst(6)",
+    "Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+
+    checkrunlog(s"""
+    (let eval0     $eval0_src
+    (let evaln_src (quote $evaln_src)
+    (let emt_src   (quote $emt_src)
+    ((eval0 evaln_src) emt_src))))""", "Cst(6)",
+    "Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
   }
 }
 
