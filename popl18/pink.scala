@@ -64,7 +64,7 @@ object Pink {
 
   def testCorrectnessOptimality() = {
     def checkrun(src: String, dst: String) = {
-      val prog_src = s"""(let exec-quote (lambda _ src (exec (trans-quote src))) $src)"""
+      val prog_src = s"""(let exec-quote (lambda _ src (exec (trans src))) $src)"""
       val prog_val = parseExp(prog_src)
       val prog_exp = trans(prog_val,Nil)
       val res = reifyv(evalms(Nil,prog_exp))
