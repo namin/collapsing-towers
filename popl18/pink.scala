@@ -74,15 +74,6 @@ object Pink {
   }
 
   def testCorrectnessOptimality() = {
-    def checkrun(src: String, dst: String) = {
-      val prog_src = s"""(let exec-quote (lambda _ src (exec (trans src))) $src)"""
-      val prog_val = parseExp(prog_src)
-      val prog_exp = trans(prog_val,Nil)
-      val res = reifyv(evalms(Nil,prog_exp))
-      check(res)(dst)
-      res
-    }
-
     // direct execution
     checkrun(s"""
     (let fac $fac_src 
@@ -96,7 +87,6 @@ object Pink {
 
     ((eval fac_src) 4)))""",
     "Cst(24)")
-
 
     // double interpretation
     checkrun(s"""
@@ -134,7 +124,6 @@ object Pink {
     // run 0 != exec, due to enclosing environment
 
     // optimality: verify collapse
-    // ((eval evalc-src) fac-src) ;; => <code for fac>
     checkrun(s"""
     (let eval          $eval_src
     (let evalc_src     (quote $evalc_src)
@@ -142,7 +131,7 @@ object Pink {
 
     ((eval evalc_src) fac_src))))""",
     Code(fac_exp_anf).toString)
-    // ((eval evalc-src) eval-src) ;; => <code for eval>
+
     checkrun(s"""
     (let eval          $eval_src
     (let evalc_src     (quote $evalc_src)
@@ -150,15 +139,15 @@ object Pink {
 
     ((eval evalc_src) eval_src))))""",
     Code(eval_exp_anf).toString)
-    // ((eval evalc-src) evalc-src) ;; => <code for evalc>
+
     checkrun(s"""
     (let eval          $eval_src
     (let evalc_src     (quote $evalc_src)
 
     ((eval evalc_src) evalc_src)))""",
     Code(evalc_exp_anf).toString)
+
     // further tower
-    // (((eval eval-src) evalc-src) fac-src) ;; => <code for fac>
     checkrun(s"""
     (let eval          $eval_src
     (let eval_src      (quote $eval_src)

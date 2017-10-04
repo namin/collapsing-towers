@@ -78,4 +78,13 @@ object Lisp {
       Special(benv => Code(Special(b2 => evalms(benv,trans(a,env)))))
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
   }
+
+  def checkrun(src: String, dst: String) = {
+    val prog_src = src
+    val prog_val = parseExp(prog_src)
+    val prog_exp = trans(prog_val,Nil)
+    val res = reifyv(evalms(Nil,prog_exp))
+    check(res)(dst)
+    res
+  }
 }
