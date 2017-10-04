@@ -11,12 +11,12 @@
   (E hole (cons E e) (cons v E) (let x E e) (app E e) (app v E) (if E e e) (a E) (b E e) (b v E) (lift E) (run E e) (reflect E))
   (M hole
      (cons M e) (cons v M) (let x M e) (app M e) (app v M) (if M e e) (a M) (b M e) (b v M) (lift M) (run M e) (reflect M)
-     (lift (lamc f x M)) (if (code e) M e) (if (code e) v M) (run (code e) M) (letc x e M))
+     (lift (lamc f x M)) (if (code e) M e) (if (code e) v M) (run v M) (letc x e M))
   (R (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (a R) (b R e) (b v R) (lift R) (run R e) (reflect R)
-     (lift (lamc f x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
+     (lift (lamc f x P)) (if (code e) P e) (if (code e) v P) (run v P) (letc x e P))
   (P hole
      (cons R e) (cons v R) (let x R e) (app R e) (app v R) (if R e e) (a R) (b R e) (b v R) (fix R) (lift R) (run R e) (reflect R)
-     (lift (lamc f x P)) (if (code e) P e) (if (code e) v P) (run (code e) P) (letc x e P))
+     (lift (lamc f x P)) (if (code e) P e) (if (code e) v P) (run v P) (letc x e P))
   (x (variable-except lit str lam cons let app if car cdr isLit isStr isCons plus minus times eq lift run reflect letc code))
   (f x))
 
