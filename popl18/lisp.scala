@@ -61,15 +61,13 @@ object Lisp {
     case Tup(Str("run"),Tup(b,Tup(a,N))) => Run(trans(b,env),trans(a,env))
     case Tup(Str("log"),Tup(b,Tup(a,N))) => Log(trans(b,env),trans(a,env))
     case Tup(Str("quote"),Tup(a,N)) => Special(benv => a)
-    case Tup(Str("exec"),Tup(a,N)) => 
-      Special(benv => evalms(Nil, reifyc(evalms(benv, trans(a,env)))))
     case Tup(Str("exec"),Tup(b,Tup(a,N))) =>
-      // Note: the only difference with Run is that we use Nil instead of benv
-      //   below for second run.
+      // Note: the only difference with Run is that we use benv instead of Nil
+      //   below for outer evalms of the non-Code case.
       def f(b: Exp, a: Exp): Special = Special(benv =>
         evalms(benv, b) match {
           case Code(b1) => reflectc(f(b1, reifyc(evalms(benv,a))))
-          case _ => evalms(Nil, reifyc(evalms(benv, a)))
+          case _ => evalms(benv, reifyc(evalms(benv, a)))
         })
       f(trans(b, env), trans(a, env))
     case Tup(Str("trans"),Tup(a,N)) =>

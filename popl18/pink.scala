@@ -107,10 +107,8 @@ object Pink {
     (let evalc         $evalc_src
     (let fac_src       (quote $fac_src)
 
-    ((exec (evalc fac_src)) 4)))""",
+    ((run 0 (evalc fac_src)) 4)))""",
     "Cst(24)")
-    // TODO diff with paper: ((run 0 (evalc fac-src)) 4) ;; => 24
-    // run 0 != exec, due to enclosing environment
 
     // optimality: verify collapse
     checkcode(s"""
@@ -175,7 +173,7 @@ object Pink {
     (let trace_n_evalc $trace_n_evalc_src
     (let fac_src       (quote $fac_src)
 
-    ((exec (trace_n_evalc fac_src)) 3)))""",
+    ((run 0 (trace_n_evalc fac_src)) 3)))""",
     "Cst(6)",
     "Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
   }
@@ -186,7 +184,7 @@ object Pink {
   }
 
   val ev0_poly_src = addCases(
-    "(if (eq? 'EM (car exp)) (run (maybe-lift 0) (trans (car (cdr exp))))")
+    "(if (eq? 'EM (car exp)) (exec (maybe-lift 0) (trans (car (cdr exp))))")
   val evn_poly_src = addCases(
     "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
 
@@ -274,7 +272,7 @@ object Pink_CPS {
     checkrun(s"""
     (let evalc   $evalc_src
     (let fac_src (quote $fac_src)
-    (((exec ((evalc fac_src) (lambda _ f f))) 4) (lambda _ x x))))""", "Cst(24)")
+    (((run 0 ((evalc fac_src) (lambda _ f f))) 4) (lambda _ x x))))""", "Cst(24)")
 
     val nested_src = "(lambda f n (if (if n 0 1) 2 3))"
     checkrun(s"""
@@ -295,7 +293,7 @@ object Pink_CPS {
     checkrun(s"""
     (let evalc $evalc_src
     (let nested_src (quote $nested_src)
-    (((exec ((evalc nested_src) (lambda _ f f))) 0) (lambda _ x x))))""", "Cst(2)")
+    (((run 0 ((evalc nested_src) (lambda _ f f))) 0) (lambda _ x x))))""", "Cst(2)")
 
     testEM()
   }
@@ -306,7 +304,7 @@ object Pink_CPS {
   }
 
   val ev0_poly_src = addCases(
-    "(if (eq? 'EM (car exp)) (run (maybe-lift 0) (trans (car (cdr exp))))")
+    "(if (eq? 'EM (car exp)) (exec (maybe-lift 0) (trans (car (cdr exp))))")
   val evn_poly_src = addCases(
     "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
 
@@ -350,7 +348,7 @@ object Pink_clambda {
     (if (eq?  'if     (car exp))   (if  (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env) (((eval l) (cadddr exp)) env))
     (if (if (eq? 'lambda (car exp)) 1 (if (eq? 'clambda (car exp)) (cdr l) 0)) ((car l) (lambda f x (((eval l) (cadddr exp))
       (lambda _ y (if (eq? y (cadr exp)) f (if (eq? y (caddr exp)) x (env y)))))))
-    (if (eq? 'clambda (car exp))       (exec 0 (((eval (cons (lambda _ e (lift e)) 1)) (cons 'lambda (cdr exp)))  (lambda _ y (lift-ref (env y)))))
+    (if (eq? 'clambda (car exp))        (run 0 (((eval (cons (lambda _ e (lift e)) 1)) (cons 'lambda (cdr exp)))  (lambda _ y (lift-ref (env y)))))
     (if (eq?  'let    (car exp))   (let x (((eval l) (caddr exp)) env) (((eval l) (cadddr exp))
       (lambda _ y (if (eq?  y (cadr exp)) x (env y)))))
     (if (eq?  'lift   (car exp))   (lift (((eval l) (cadr exp)) env))
@@ -365,7 +363,7 @@ object Pink_clambda {
     (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'run    (car exp))   (run (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
-    (if (eq?  'EM     (car exp))   (run ((car l) 0) (trans (car (cdr exp))))
+    (if (eq?  'EM     (car exp))   (exec ((car l) 0) (trans (car (cdr exp))))
     (if (eq?  'trans (car exp))   (trans (cadr exp))
     ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))

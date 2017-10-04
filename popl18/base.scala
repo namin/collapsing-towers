@@ -169,7 +169,7 @@ object Base {
           reflectc(Run(b1, reifyc(evalms(env,e))))
         case _ =>
           val code = reifyc(evalms(env, e))
-          reifyv(evalms(env, code))
+          reifyv(evalms(Nil, code))
       }
 
     case Log(b,e) =>
