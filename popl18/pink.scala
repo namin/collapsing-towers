@@ -374,46 +374,46 @@ object Pink_clambda {
   val ev_tie_src = s"""(lambda eval l (lambda _ e ((($ev_poly_src eval) l) e)))"""
   val ev_src = s"""($ev_tie_src (cons (lambda _ e e) 0))"""
   val evc_src = s"""($ev_tie_src (cons (lambda _ e (lift e)) 1))"""
+  val eval_src = ev_nil(ev_src)
+  val evalc_src = ev_nil(evc_src)
   val fc_src = fac_src.replace("lambda", "clambda")
-  val fc_val = parseExp(fc_src)
 
+  val fc_val = parseExp(fc_src)
   val ev_val = parseExp(ev_src)
   val ev_exp1 = trans(ev_val, List("arg1"))
-
   val evc_val = parseExp(evc_src)
   val evc_exp1 = trans(evc_val, List("arg1"))
 
   def test_clambda() = {
-    check(run { evalms(List(fc_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) })("Cst(24)")
-    val c1 = (run { evalms(List(fc_val), App(App(ev_exp1, Var(0)),Sym("nil-env"))) }).asInstanceOf[Clo]
-    check(c1.env)("List()")
-    check(pretty(c1.e, List("r", "n")))("""(if n 
+    checkrun(s"""
+    (let eval $eval_src
+    (let fc_src (quote $fc_src)
+    ((eval fc_src) 4)))""", "Cst(24)")
+    val c_fc = ev(s"""
+    (let eval $eval_src
+    (let fc_src (quote $fc_src)
+    (eval fc_src)))""").asInstanceOf[Clo]
+    check(c_fc.env)("List()")
+    check(pretty(c_fc.e, List("r", "n")))("""(if n 
   (let x2 (- n 1) 
   (let x3 (r x2) (* n x3))) 
 1)""") // all interpretation overhead is gone
 
-    val c2_val = parseExp("(lambda _ x (clambda _ y (* (+ x x) y)))")
-    check(run { evalms(List(c2_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) })("Cst(8)")
+    checkrun(s"((($eval_src (quote ( lambda _ x (clambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
+    checkrun(s"((($eval_src (quote (clambda _ x ( lambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
+    checkrun(s"((($eval_src (quote (clambda _ x (clambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
 
-    val c3_val = parseExp("(clambda _ x (lambda _ y (* (+ x x) y)))")
-    check(run { evalms(List(c3_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) })("Cst(8)")
+    checkrun(s"(($eval_src (quote (let inc (lambda _ x (+ x 1)) (clambda _ y (inc y))))) 4)", "Cst(5)")
 
-    val c4_val = parseExp("(clambda _ x (clambda _ y (* (+ x x) y)))")
-    check(run { evalms(List(c4_val), App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4))) })("Cst(8)")
-
-    val c5_val = parseExp("(let inc (lambda _ x (+ x 1)) (clambda _ y (inc y)))")
-    check(run { evalms(List(c5_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(4))) })("Cst(5)")
-
-    val c6_val = parseExp("(lambda _ x (clambda _ y (lambda _ l (* (l (+ x x)) (l y)))))")
-    check(run { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Var(2)))) })("Cst(8)")
-    val c6 = (run { evalms(List(c6_val), App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1))) }).asInstanceOf[Clo]
-    check(c6.env)("List()")
-    check(pretty(c6.e, List("_", "y")))("""(lambda f2 x3 
+    val f_src = "(lambda _ x (clambda _ y (lambda _ l (* (l (+ x x)) (l y)))))"
+    checkrun(s"(((($eval_src (quote $f_src)) 1) 4) (lambda _ z z))", "Cst(8)")
+    val c_f = ev(s"(($eval_src (quote $f_src)) 1)").asInstanceOf[Clo]
+    check(c_f.env)("List()")
+    check(pretty(c_f.e, List("_", "y")))("""(lambda f2 x3 
   (let x4 (+ <special> <special>) 
   (let x5 (x3 x4) 
   (let x6 (x3 y) (* x5 x6)))))""")
-    val c7 = reifyc { evalms(List(c6_val), App(App(App(App(App(ev_exp1, Var(0)),Sym("nil-env")),Lit(1)),Lit(4)),Lam(Lift(Var(2))))) }
-    check(pretty(c7, Nil))("(* 2 4)")
+    checkcode(s"(((($eval_src (quote $f_src)) 1) 4) (lambda _ z (lift z)))", "(* 2 4)")
   }
 
   def test_em() {
