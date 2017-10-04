@@ -51,5 +51,44 @@ match)))"""
         'no))))))) 
     'no)))))))""")
 
+    // deriving translators
+    import PinkBase._
+    val instr_poly_src = Pink.ev_poly_src.replace("(env exp)", "(if (eq? 's exp) (log (maybe-lift2 0) (env exp)) (env exp))")
+    val instr_src = ev_nil(ev_nolift(s"(let maybe-lift2 (lambda _ x x) $instr_poly_src)"))
+    val instr2_src = ev_nil(ev_nolift(s"(let maybe-lift2 (lambda _ x (lift x)) $instr_poly_src)"))
+    val instrc_src = ev_nil(ev_lift(s"(let maybe-lift2 (lambda _ x (lift (lift x))) $instr_poly_src)"))
+    val log_ab_code = """(lambda f0 x1 
+  (let x2 (log 0 x1) 
+  (let x3 (log 0 x2) 
+  (let x4 (car x3) 
+  (let x5 (eq? 'done x4) 
+  (if x5 'no 
+  
+    (let x6 (log 0 x2) 
+    (let x7 (car x6) 
+    (let x8 (eq? 'a x7) 
+    (if x8 
+      (let x9 (log 0 x2) 
+      (let x10 (cdr x9) 
+      (let x11 (log 0 x10) 
+      (let x12 (log 0 x11) 
+      (let x13 (car x12) 
+      (let x14 (eq? 'done x13) 
+      (if x14 'no 
+      
+        (let x15 (log 0 x11) 
+        (let x16 (car x15) 
+        (let x17 (eq? 'b x16) 
+        (if x17 
+          (let x18 (log 0 x11) 
+          (let x19 (cdr x18) 'yes)) 
+        'no))))))))))) 
+    'no))))))))))"""
+    val logres = "Tup(Str(a),Tup(Str(b),Tup(Str(done),Str(.))));Tup(Str(a),Tup(Str(b),Tup(Str(done),Str(.))));Tup(Str(a),Tup(Str(b),Tup(Str(done),Str(.))));Tup(Str(a),Tup(Str(b),Tup(Str(done),Str(.))));Tup(Str(b),Tup(Str(done),Str(.)));Tup(Str(b),Tup(Str(done),Str(.)));Tup(Str(b),Tup(Str(done),Str(.)));Tup(Str(b),Tup(Str(done),Str(.)));"
+    checkrunlog(s"((($instr_src '$matcher_src) '(a b done)) '(a b done))", "Str(yes)", logres)
+    checkrunlog(s"((run 0 (($instr2_src '$matcherc_src) '(a b done))) '(a b done))", "Str(yes)", logres)
+    checkrunlog(s"((run 0 ((run 0 ($instrc_src '$matcherc_src)) '(a b done))) '(a b done))", "Str(yes)", logres)
+    checkcode(s"(($instr2_src '$matcherc_src) '(a b done))", log_ab_code)
+    checkcode(s"((run 0 ($instrc_src '$matcherc_src)) '(a b done))", log_ab_code)
   }
 }
