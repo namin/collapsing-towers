@@ -378,12 +378,6 @@ object Pink_clambda {
   val evalc_src = ev_nil(evc_src)
   val fc_src = fac_src.replace("lambda", "clambda")
 
-  val fc_val = parseExp(fc_src)
-  val ev_val = parseExp(ev_src)
-  val ev_exp1 = trans(ev_val, List("arg1"))
-  val evc_val = parseExp(evc_src)
-  val evc_exp1 = trans(evc_val, List("arg1"))
-
   def test_clambda() = {
     checkrun(s"""
     (let eval $eval_src
@@ -417,34 +411,17 @@ object Pink_clambda {
   }
 
   def test_em() {
-    val oldLog = log
-    var s = ""
-    log = {x => s += x.toString+";" }
-
     val ev_log_src = ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log ((car l) 0) (env exp)) (env exp))")
-    check(run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '($fac_src 4)) env))")),
-      App(App(ev_exp1, Var(0)), Sym("nil-env"))) })("Cst(24)")
-    check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
-    s = ""
-
-    check(run { evalms(List(parseExp(s"(EM ((($ev_log_src l) '(${fac_src.replace("lambda", "clambda")} 4)) env))")),
-      App(App(ev_exp1, Var(0)), Sym("nil-env"))) })("Cst(24)")
-    check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
-    s = ""
-
-    check(run { evalms(List(parseExp(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    val fac4_trace = "Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);"
+    checkrunlog(s"($eval_src '(EM ((($ev_log_src l) '($fac_src 4)) env)))", "Cst(24)", fac4_trace)
+    checkrunlog(s"($eval_src '(EM ((($ev_log_src l) '($fc_src 4)) env)))", "Cst(24)", fac4_trace)
+    checkrunlog(s"""($eval_src '(EM ((((lambda ev l (lambda _ exp (lambda _ env
     (if (if (sym? exp) (eq? 'n exp) 0) (log ((car l) 0) (((eval l) exp) env))
-    ((((tie ev) l) exp) env))))) l) '($fac_src 4)) env))""")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) })("Cst(24)")
-    check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
-    s = ""
-
-    check(run { evalms(List(parseExp(s"""(EM ((((lambda ev l (lambda _ exp (lambda _ env
+    ((((tie ev) l) exp) env))))) l) '($fac_src 4)) env)))""", "Cst(24)", fac4_trace)
+    checkrunlog(s"""($eval_src '(EM ((((lambda ev l (lambda _ exp (lambda _ env
     (if (if (sym? exp) (eq? 'n exp) 0) (log ((car l) 0) (((eval l) exp) env))
-    ((((tie ev) l) exp) env))))) l) '(${fac_src.replace("lambda", "clambda")} 4)) env))""")), App(App(ev_exp1, Var(0)), Sym("nil-env"))) })("Cst(24)")
-    check(s)("Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
-    s = ""
-
-    log = oldLog
+    ((((tie ev) l) exp) env))))) l) '($fc_src  4)) env)))""",
+    "Cst(24)", fac4_trace)
   }
 
   def test() = {
