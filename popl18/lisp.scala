@@ -79,12 +79,20 @@ object Lisp {
     case Tup(a,Tup(b,N)) => App(trans(a,env),trans(b,env))
   }
 
-  def checkrun(src: String, dst: String) = {
+  def ev(src: String) = {
     val prog_src = src
     val prog_val = parseExp(prog_src)
     val prog_exp = trans(prog_val,Nil)
-    val res = reifyv(evalms(Nil,prog_exp))
+    reifyv(evalms(Nil,prog_exp))
+  }
+  def checkrun(src: String, dst: String) = {
+    val res = ev(src)
     check(res)(dst)
+    res
+  }
+  def checkcode(src: String, dst: String) = {
+    val Code(res) = ev(src)
+    check(pretty(res, Nil))(dst)
     res
   }
 }
