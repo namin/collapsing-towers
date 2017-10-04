@@ -3,13 +3,16 @@
 import Base._
 import Lisp._
 
-object Prog {
+object PinkBase {
   val fac_src = "(lambda f n (if n (* n (f (- n 1))) 1))"
   val fac_val = parseExp(fac_src)
   val fac_exp = trans(fac_val,List("arg"))
   val fac_exp_anf = reify { anf(List(Sym("XX")),fac_exp) }
+  def ev_nolift(src: String) = s"(lambda eval e ((($src (lambda _ e e)) eval) e))"
+  def ev_lift(src: String) = s"(lambda eval e ((($src (lambda _ e (lift e))) eval) e))"
+  def ev_nil(src: String) = s"(lambda _ e (($src e) 'nil-env))"
 }
-import Prog._
+import PinkBase._
 
 object Pink {
   val ev_poly_src = """
@@ -42,11 +45,6 @@ object Pink {
     ((env (car exp)) ((eval (cadr exp)) env))))))))))))))))))))))
   (((eval (car exp)) env) ((eval (cadr exp)) env)))))))))
 """
-
-  def ev_nolift(src: String) = s"(lambda eval e ((($src (lambda _ e e)) eval) e))"
-  def ev_lift(src: String) = s"(lambda eval e ((($src (lambda _ e (lift e))) eval) e))"
-  def ev_nil(src: String) = s"(lambda _ e (($src e) 'nil-env))"
-
   val eval_src = ev_nil(ev_nolift(ev_poly_src))
   val evalc_src = ev_nil(ev_lift(ev_poly_src))
 
@@ -157,10 +155,7 @@ object Pink {
   }
 
   val evt_poly_src = ev_poly_src.replace("(env exp)", "(if (eq? 'n exp) (log (maybe-lift 0) (env exp)) (env exp))")
-  val evtc_src = ev_lift(evt_poly_src)
-  val trace_n_evalc_src = ev_nil(evtc_src)
-  val evtc_val = parseExp(evtc_src)
-  val evtc_exp1 = trans(evtc_val, List("arg1"))
+  val trace_n_evalc_src = ev_nil(ev_lift(evt_poly_src))
   def testInstrumentation() = {
     checkcode(s"""
     (let trace_n_evalc $trace_n_evalc_src
@@ -195,19 +190,12 @@ object Pink {
   val evn_poly_src = addCases(
     "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
 
-  val ev0_src = ev_nolift(ev0_poly_src)
-  val evn_src = ev_nolift(evn_poly_src)
-
-  val eval0_src = ev_nil(ev0_src)
-  val evaln_src = ev_nil(evn_src)
+  val eval0_src = ev_nil(ev_nolift(ev0_poly_src))
+  val evaln_src = ev_nil(ev_nolift(evn_poly_src))
 
   val emt_src = """((EM (((lambda ev exp (lambda _ env
      (if (if (sym? exp) (eq? 'n exp) 0) (log 0 ((eval exp) env)) (((tie ev) exp) env))))
      '(lambda f n (if n (* n (f (- n 1))) 1))) env)) 3)"""
-  val ev0_val = parseExp(ev0_src)
-  val evn_val = parseExp(evn_src)
-  val emt_val = parseExp(emt_src)
-  val ev0_exp1 = trans(ev0_val,List("arg"))
   def testEM() = {
     // sanity checks
     checkrun(s"""
