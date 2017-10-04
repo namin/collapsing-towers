@@ -4,5 +4,6 @@ object TestMain {
     Pink_CPS.test()
     Pink_clambda.test()
     Matcher.test()
+    Bench.test()
   }
 }
