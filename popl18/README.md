@@ -65,7 +65,16 @@ available at [namin/lms-black](https://github.com/namin/lms-black), here referre
 * The `testEM()` method in the object `Pink_CPS` in [`pink.scala`](pink.scala) demonstrates the example of this section.
 ### 5.2 Compiling under Persistent Semantic Modifications
 * The object `Pink_clambda`  in [`pink.scala`](pink.scala) shows how to implement and exercise `clambda` in Pink.
-## Section 6 and beyond
-* The Purple examples of Section 7 are collected as [tests](https://github.com/namin/lms-black/tree/master/src/test/scala/lms/black) in [the Purple development](https://github.com/namin/lms-black).
+## 6 Purple: Reflection à la Black
+* The example shown as a starting point here is in [`purple/src/test/.../em.scala`](https://github.com/namin/lms-black/blob/master/src/test/scala/lms/black/em.scala).
 * The Purple development [source](https://github.com/namin/lms-black/tree/master/src/main/scala/lms/black) consists of the stage-polymorphic base interpreter functions ([`eval.scala`](https://github.com/namin/lms-black/blob/master/src/main/scala/lms/black/eval.scala)), the LMS instantiation([`stage.scala`](https://github.com/namin/lms-black/blob/master/src/main/scala/lms/black/stage.scala)), and various utilities including a REPL. The REPL is automatically imported with `sbt console` from the top-level [`purple`](https://github.com/namin/lms-black) directory and can be invoked with `ev`, e.g. `ev("(+ 1 1)")`.
-* The benchmarks for Pink are collected in [`bench.scala`](bench.scala). The benchmarks for Purple are collected in [`purple/src/test/.../bench.scala`](https://github.com/namin/lms-black/blob/master/src/test/scala/lms/black/bench.scala) and ran with `sbt test:run` from the the top-level [`purple`](https://github.com/namin/lms-black) directory.
+## 7 Purple / Black Examples
+* The Purple examples are collected as [tests](https://github.com/namin/lms-black/tree/master/src/test/scala/lms/black) in [the Purple development](https://github.com/namin/lms-black).
+## 8 from λ↑↓ to LMS
+### 8.1 Stage Polymorphism with Type Classes
+* The `trait Ops[R[_]]` is defined in [`purple/src/main/.../eval.scala`](https://github.com/namin/lms-black/blob/master/src/main/scala/lms/black/eval.scala). The identity instantiation is defined as `implicit object OpsNoRep extends Ops[NoRep]` in the same file.
+* The LMS instantiation is defined as `implicit object OpsRep extends Ops[Rep]` in [`purple/src/main/.../stage.scala`](https://github.com/namin/lms-black/blob/master/src/main/scala/lms/black/stage.scala).
+## 9 A Sketch of Purple's Implementation
+* Most of the code from this section is in [`purple/src/main/.../eval.scala`](https://github.com/namin/lms-black/blob/master/src/main/scala/lms/black/eval.scala).
+## 10 Benchmarks
+* The benchmarks for Pink are collected in [`bench.scala`](bench.scala) and ran as part of `sbt run`. The benchmarks for Purple are collected in [`purple/src/test/.../bench.scala`](https://github.com/namin/lms-black/blob/master/src/test/scala/lms/black/bench.scala) and ran with `sbt test:run` from the the top-level [`purple`](https://github.com/namin/lms-black) directory.
