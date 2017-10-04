@@ -173,9 +173,10 @@ object Pink {
   val evtc_val = parseExp(evtc_src)
   val evtc_exp1 = trans(evtc_val, List("arg1"))
   def testInstrumentation() = {
-    val fact_exp = checkcode(s"""
+    checkcode(s"""
     (let trace_n_evalc $trace_n_evalc_src
     (let fac_src       (quote $fac_src)
+
     (trace_n_evalc fac_src)))""",
     """(lambda f0 x1 
   (let x2 (log 0 x1) 
@@ -186,12 +187,13 @@ object Pink {
     (let x6 (f0 x5) (* x3 x6))))) 
   1)))""")
 
-    val oldLog = log
-    var s = ""
-    log = {x => s += x.toString+";" }
-    check(run { evalms(Nil,App(fact_exp,Lit(3))) })("Cst(6)")
-    check(s)("Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
-    log = oldLog
+    checkrunlog(s"""
+    (let trace_n_evalc $trace_n_evalc_src
+    (let fac_src       (quote $fac_src)
+
+    ((exec (trace_n_evalc fac_src)) 3)))""",
+    "Cst(6)",
+    "Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
   }
 
   def addCases(cs: String*): String = {

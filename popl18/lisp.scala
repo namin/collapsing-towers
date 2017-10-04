@@ -96,4 +96,16 @@ object Lisp {
     res
   }
   def prettycode(e: Exp) = pretty(e, Nil)
+  def checkrunlog(src: String, dst: String, expected_log: String) = {
+    val oldLog = Base.log
+    try {
+      var s = ""
+      Base.log = {x => s += x.toString+";" }
+      val res = checkrun(src, dst)
+      check(s)(expected_log)
+      res
+    } finally {
+      Base.log = oldLog
+    }
+  }
 }
