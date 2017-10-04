@@ -249,17 +249,8 @@ object Pink_CPS {
   (((eval (car exp)) env) (lambda _ v1 (((eval (cadr exp)) env) (lambda _ v2 ((v1 v2) (maybe-lift (lambda _ x (k x))))))))))))))))
 """
 
-  val ev_src = ev_nolift(ev_poly_src)
-  val evc_src = ev_lift(ev_poly_src)
-
   val eval_src = ev_nil(ev_nolift(ev_poly_src))
   val evalc_src = ev_nil(ev_lift(ev_poly_src))
-
-  val ev_val = parseExp(ev_src)
-  val ev_exp1 = trans(ev_val, List("arg1"))
-
-  val evc_val = parseExp(evc_src)
-  val evc_exp1 = trans(evc_val, List("arg1"))
 
   def test() = {
     // interpretation of fac
