@@ -130,8 +130,8 @@ object Pink {
 
     ((exec (evalc fac_src)) 4)))""",
     "Cst(24)")
-    // TODO with paper: ((run 0 (evalc fac-src)) 4) ;; => 24
-    // run 0 != exec, due to enclsoing environment
+    // TODO diff with paper: ((run 0 (evalc fac-src)) 4) ;; => 24
+    // run 0 != exec, due to enclosing environment
 
     // optimality: verify collapse
     // ((eval evalc-src) fac-src) ;; => <code for fac>
