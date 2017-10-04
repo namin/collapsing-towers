@@ -48,7 +48,7 @@ available at [namin/lms-black](https://github.com/namin/lms-black), here referre
 * Variants of __Fig. 4__ are in [`pink.scala`](pink.scala) and [`pink-scheme/pink.scm`](https://github.com/namin/pink/blob/master/pink.scm).
 * Examples of collapsing towers are in [`pink.scala`](pink.scala) and [`pink-scheme/pink-tests.scm`](https://github.com/namin/pink/blob/master/pink-tests.scm).
 * __Fig. 5__ is developed in [`matcher.scala`](matcher.scala) and [`pink-scheme/matcher.scm`](https://github.com/namin/pink/blob/master/matcher.scm).
-* __Fig. 6__ is derived from examples in [`pink.scala`](pink.scala).
+* __Fig. 6__ is extracted from outputs of examples in [`pink.scala`](pink.scala). Search for "confirming Figure 6", which occurs three times for the left, middle and right columns of the figure.
 ### 4.1 Correctness and Optimality
 * The `testCorrectnessOptimality()` method in [`pink.scala`](pink.scala) directly follows the examples in this section.
 ### 4.2 Deriving Translators from Heterogeneous Towers

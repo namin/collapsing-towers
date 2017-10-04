@@ -144,7 +144,7 @@ object Pink {
     (((eval eval_src) evalc_src) fac_src)))))""",
     prettycode(fac_exp_anf))
 
-    // confirming left of Figure 6
+    // confirming Figure 6 (left)
     check(prettycode(fac_exp_anf))("""(lambda f0 x1 
   (if x1 
     (let x2 (- x1 1) 
@@ -160,6 +160,7 @@ object Pink {
     (let fac_src       (quote $fac_src)
 
     (trace_n_evalc fac_src)))""",
+    // confirming Figure 6 (middle)
     """(lambda f0 x1 
   (let x2 (log 0 x1) 
   (if x2 
@@ -260,7 +261,9 @@ object Pink_CPS {
     checkcode(s"""
     (let evalc   $evalc_src
     (let fac_src (quote $fac_src)
-    ((evalc fac_src) (lambda _ f f))))""", """(lambda f0 x1 
+    ((evalc fac_src) (lambda _ f f))))""",
+    // confirming Figure 6 (right)
+    """(lambda f0 x1 
   (lambda f2 x3 
     (if x1 
       (let x4 (- x1 1) 
