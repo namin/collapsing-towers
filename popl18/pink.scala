@@ -286,14 +286,14 @@ object Pink_CPS {
     (((exec ((evalc fac_src) (lambda _ f f))) 4) (lambda _ x x))))""", "Cst(24)")
 
     val nested_src = "(lambda f n (if (if n 0 1) 2 3))"
-    val nested_val = parseExp(nested_src)
-    check(run { evalms(List(nested_val), App(App(App(
-      ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(0)),Lam(Var(4)))))) })("Cst(2)")
-
-    val c4 = reifyc { evalms(List(nested_val),App(App(App(evc_exp1,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
-    check(run { evalms(Nil, App(App(c4, Lit(0)), Lam(Var(1)))) })("Cst(2)")
-
-    check(pretty(c4,Nil))("""(lambda f0 x1 
+    checkrun(s"""
+    (let eval $eval_src
+    (let nested_src (quote $nested_src)
+    ((eval nested_src) (lambda _ f ((f 0) (lambda _ x x))))))""", "Cst(2)")
+    checkcode(s"""
+    (let evalc $evalc_src
+    (let nested_src (quote $nested_src)
+    ((evalc nested_src) (lambda _ f f))))""", """(lambda f0 x1 
   (lambda f2 x3 
     (if x1 
       (if 0 (x3 2) 
@@ -301,6 +301,10 @@ object Pink_CPS {
     
       (if 1 (x3 2) 
       (x3 3)))))""")
+    checkrun(s"""
+    (let evalc $evalc_src
+    (let nested_src (quote $nested_src)
+    (((exec ((evalc nested_src) (lambda _ f f))) 0) (lambda _ x x))))""", "Cst(2)")
 
     testEM()
   }
