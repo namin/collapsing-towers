@@ -19,10 +19,10 @@ Run `core-exs.rkt` in [DrRacket](https://racket-lang.org/).
 
 ## Code
 * __[`base.scala`](base.scala)__ defines the multi-level core language λ↑↓ as a definitional interpreter in Scala.
-* __[`lisp.scala`](lisp.scala)__ defines a LISP front end and exercises collapsing on various towers, including the tracing factorial microbenchmark.
+* __[`lisp.scala`](lisp.scala)__ defines a LISP front end.
 * __[`pink.scala`](pink.scala)__ defines meta-circular stage-parametric interpreters for Pink.
-* __[`matches.scala`](matches.scala)__ defines matchers on top of the LISP front end.
-* __[`bench.scala`](bench.scala)__ defines a generic helper for running microbenchmarks.
+* __[`matcher.scala`](matcher.scala)__ defines a regular expression matcher on top of LISP front end & Pink.
+* __[`bench.scala`](bench.scala)__ defines a microbenchmark for comparing evaluation and compilation in Pink.
 
 ## Run
 Run `sbt run` using Scala's [SBT](http://www.scala-sbt.org/).
@@ -41,8 +41,8 @@ available at [namin/lms-black](https://github.com/namin/lms-black), here referre
 * __Fig. 3__ and other such examples are in the PLT Redex examples in [`core-exs.rkt`](core-exs.rkt).
 * Variants of __Fig. 4__ are in [`pink.scala`](pink.scala) and [`pink-scheme/pink.scm`](https://github.com/namin/pink/blob/master/pink.scm).
 * Examples of collapsing towers are in [`pink.scala`](pink.scala) and [`pink-scheme/pink-tests.scm`](https://github.com/namin/pink/blob/master/pink-tests.scm), and more crudely in [`lisp.scala`](lisp.scala).
-* __Fig. 5__ is developed in [`matches.scala`](matches.scala) and [`pink-scheme/matcher.scm`](https://github.com/namin/pink/blob/master/matcher.scm).
+* __Fig. 5__ is developed in [`matcher.scala`](matcher.scala) and [`pink-scheme/matcher.scm`](https://github.com/namin/pink/blob/master/matcher.scm).
 * __Fig. 6__ is derived from examples in [`pink.scala`](pink.scala).
 * The Purple examples of Section 7 are collected as [tests](https://github.com/namin/lms-black/tree/master/src/test/scala/lms/black) in [the Purple development](https://github.com/namin/lms-black).
 * The Purple development [source](https://github.com/namin/lms-black/tree/master/src/main/scala/lms/black) consists of the stage-polymorphic base interpreter functions ([`eval.scala`](https://github.com/namin/lms-black/blob/master/src/main/scala/lms/black/eval.scala)), the LMS instantiation([`stage.scala`](https://github.com/namin/lms-black/blob/master/src/main/scala/lms/black/stage.scala)), and various utilities including a REPL. The REPL is automatically imported with `sbt console` from the top-level [`purple`](https://github.com/namin/lms-black) directory and can be invoked with `ev`, e.g. `ev("(+ 1 1)")`.
-* The benchmarks for Pink are collected in the `benchmarks` method in [`test-main.scala`](test-main.scala). The benchmarks for Purple are collected in [`purple/src/test/.../bench.scala`](https://github.com/namin/lms-black/blob/master/src/test/scala/lms/black/bench.scala) and ran with `sbt test:run` from the the top-level [`purple`](https://github.com/namin/lms-black) directory.
+* The benchmarks for Pink are collected in [`bench.scala`](bench.scala). The benchmarks for Purple are collected in [`purple/src/test/.../bench.scala`](https://github.com/namin/lms-black/blob/master/src/test/scala/lms/black/bench.scala) and ran with `sbt test:run` from the the top-level [`purple`](https://github.com/namin/lms-black) directory.
