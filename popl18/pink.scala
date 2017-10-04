@@ -249,8 +249,11 @@ object Pink_CPS {
   (((eval (car exp)) env) (lambda _ v1 (((eval (cadr exp)) env) (lambda _ v2 ((v1 v2) (maybe-lift (lambda _ x (k x))))))))))))))))
 """
 
-  val ev_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e e)) eval) e))"""
-  val evc_src = s"""(lambda eval e ((($ev_poly_src (lambda _ e (lift e))) eval) e))"""
+  val ev_src = ev_nolift(ev_poly_src)
+  val evc_src = ev_lift(ev_poly_src)
+
+  val eval_src = ev_nil(ev_nolift(ev_poly_src))
+  val evalc_src = ev_nil(ev_lift(ev_poly_src))
 
   val ev_val = parseExp(ev_src)
   val ev_exp1 = trans(ev_val, List("arg1"))
@@ -260,11 +263,15 @@ object Pink_CPS {
 
   def test() = {
     // interpretation of fac
-    check(run { evalms(List(fac_val), App(App(App(ev_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) })("Cst(24)")
-
+    checkrun(s"""
+    (let eval    $eval_src
+    (let fac_src (quote $fac_src)
+    ((eval fac_src) (lambda _ f ((f 4) (lambda _ x x))))))""", "Cst(24)")
     // compilation of fac
-    val facc_exp = reifyc { evalms(List(fac_val),App(App(App(evc_exp1,Var(0)),Sym("nil-env")),Lam(Var(2)))) }
-    check(pretty(facc_exp, Nil))("""(lambda f0 x1 
+    checkcode(s"""
+    (let evalc   $evalc_src
+    (let fac_src (quote $fac_src)
+    ((evalc fac_src) (lambda _ f f))))""", """(lambda f0 x1 
   (lambda f2 x3 
     (if x1 
       (let x4 (- x1 1) 
@@ -273,8 +280,10 @@ object Pink_CPS {
         (lambda f6 x7 
           (let x8 (* x1 x7) (x3 x8))) (x5 x6)))) 
     (x3 1))))""")
-
-    check(run { evalms(Nil, App(App(facc_exp, Lit(4)),Lam(Var(1)))) })("Cst(24)")
+    checkrun(s"""
+    (let evalc   $evalc_src
+    (let fac_src (quote $fac_src)
+    (((exec ((evalc fac_src) (lambda _ f f))) 4) (lambda _ x x))))""", "Cst(24)")
 
     val nested_src = "(lambda f n (if (if n 0 1) 2 3))"
     val nested_val = parseExp(nested_src)
