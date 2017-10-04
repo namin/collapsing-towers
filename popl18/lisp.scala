@@ -95,4 +95,5 @@ object Lisp {
     check(pretty(res, Nil))(dst)
     res
   }
+  def prettycode(e: Exp) = pretty(e, Nil)
 }

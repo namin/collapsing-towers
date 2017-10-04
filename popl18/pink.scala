@@ -107,12 +107,12 @@ object Pink {
     "Cst(24)")
 
     // compilation
-    checkrun(s"""
+    checkcode(s"""
     (let evalc         $evalc_src
     (let fac_src       (quote $fac_src)
 
     (evalc fac_src)))""",
-    Code(fac_exp_anf).toString)
+    prettycode(fac_exp_anf))
 
     checkrun(s"""
     (let evalc         $evalc_src
@@ -124,41 +124,41 @@ object Pink {
     // run 0 != exec, due to enclosing environment
 
     // optimality: verify collapse
-    checkrun(s"""
+    checkcode(s"""
     (let eval          $eval_src
     (let evalc_src     (quote $evalc_src)
     (let fac_src       (quote $fac_src)
 
     ((eval evalc_src) fac_src))))""",
-    Code(fac_exp_anf).toString)
+    prettycode(fac_exp_anf))
 
-    checkrun(s"""
+    checkcode(s"""
     (let eval          $eval_src
     (let evalc_src     (quote $evalc_src)
     (let eval_src      (quote $eval_src)
 
     ((eval evalc_src) eval_src))))""",
-    Code(eval_exp_anf).toString)
+    prettycode(eval_exp_anf))
 
-    checkrun(s"""
+    checkcode(s"""
     (let eval          $eval_src
     (let evalc_src     (quote $evalc_src)
 
     ((eval evalc_src) evalc_src)))""",
-    Code(evalc_exp_anf).toString)
+    prettycode(evalc_exp_anf))
 
     // further tower
-    checkrun(s"""
+    checkcode(s"""
     (let eval          $eval_src
     (let eval_src      (quote $eval_src)
     (let evalc_src     (quote $evalc_src)
     (let fac_src       (quote $fac_src)
 
     (((eval eval_src) evalc_src) fac_src)))))""",
-    Code(fac_exp_anf).toString)
+    prettycode(fac_exp_anf))
 
-    // left of Figure 6
-    check(pretty(fac_exp_anf, Nil))("""(lambda f0 x1 
+    // confirming left of Figure 6
+    check(prettycode(fac_exp_anf))("""(lambda f0 x1 
   (if x1 
     (let x2 (- x1 1) 
     (let x3 (f0 x2) (* x1 x3))) 
