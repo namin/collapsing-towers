@@ -3,5 +3,6 @@ object TestMain {
     Pink.test()
     Pink_CPS.test()
     Pink_clambda.test()
+    Matcher.test()
   }
 }
