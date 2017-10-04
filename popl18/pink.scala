@@ -310,8 +310,8 @@ object Pink_CPS {
   val evn_poly_src = addCases(
     "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
 
-  val ev0_src = s"""(lambda eval e ((($ev0_poly_src (lambda _ e e)) eval) e))"""
-  val evn_src = s"""(lambda eval e ((($evn_poly_src (lambda _ e e)) eval) e))"""
+  val eval0_src = ev_nil(ev_nolift(ev0_poly_src))
+  val evaln_src = ev_nil(ev_nolift(evn_poly_src))
 
   // 5.1.3 Language Extensions in User Code
   // defining call/cc in terms of EM
@@ -321,15 +321,18 @@ object Pink_CPS {
 
 (+ 3 (call/cc (lambda _ k (k (k (k 1)))))))
 """
-  val ev0_val = parseExp(ev0_src)
-  val evn_val = parseExp(evn_src)
-  val emt_val = parseExp(emt_src)
-  val ev0_exp1 = trans(ev0_val,List("arg"))
   def testEM() = {
     // sanity check
-    check(run { evalms(List(fac_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(App(App(Var(2),Lit(4)),Lam(Var(4)))))) })("Cst(24)")
+    checkrun(s"""
+    (let eval0   $eval0_src
+    (let fac_src (quote $fac_src)
+    ((eval0 fac_src) (lambda _ f ((f 4) (lambda _ x x))))))""", "Cst(24)")
 
-    check(run { evalms(List(emt_val), App(App(App(ev0_exp1, Var(0)), Sym("nil-env")), Lam(Var(2)))) })("Cst(10)")
+    // test call/cc
+    checkrun(s"""
+    (let eval0   $eval0_src
+    (let emt_src (quote $emt_src)
+    ((eval0 emt_src) (lambda _ x x))))""", "Cst(10)")
   }
 }
 
