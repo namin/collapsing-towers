@@ -3,6 +3,7 @@
 object Base {
   var log: Val => Unit = {x => println(x)}
 
+  // expressions
   abstract class Exp
   case class Lit(n:Int) extends Exp
   case class Sym(s:String) extends Exp
@@ -30,6 +31,7 @@ object Base {
     override def toString = "<special>"
   }
 
+  // values
   type Env = List[Val]
 
   abstract class Val
@@ -40,6 +42,7 @@ object Base {
 
   case class Code(e:Exp) extends Val
 
+  // interpreter state and mechanics
   var stFresh = 0
   var stBlock: List[Exp] = Nil
   var stFun: List[(Int,Env,Exp)] = Nil
@@ -63,7 +66,7 @@ object Base {
     fresh()
   }
 
-  // regular anf conversion
+  // anf conversion: for checking generated against expected code
   def anf(env: List[Exp], e: Exp): Exp = e match {
     case Lit(n) => Lit(n)
     case Sym(n) => Sym(n)
@@ -136,6 +139,8 @@ object Base {
       val (Code(u),Code(v)) = (a,b)
       reflect(Cons(u,v))
     case Clo(env2,e2) => // function
+      // NOTE: We memoize functions here. This is not essential, and 
+      // could be removed, yielding exactly the code shown in the paper.
       stFun collectFirst { case (n,`env2`,`e2`) => n } match {
         case Some(n) =>
           Var(n)
@@ -144,10 +149,6 @@ object Base {
           reflect(Lam(reify{ val Code(r) = evalms(env2:+Code(fresh()):+Code(fresh()),e2); r }))
       }
     case Code(e) => reflect(Lift(e))
-      // Here is a choice: should lift be idempotent? 
-      // In this case we would return e. 
-      // This seems to imply that we can have only 2 stages.
-      // If we would like to support more, we need to return Lift(e)
   }
 
   // multi-stage evaluation
@@ -164,6 +165,8 @@ object Base {
       Code(lift(evalms(env,e)))
 
     case Run(b,e) =>
+      // first argument decides whether to generate
+      // `run` statement or run code directly
       evalms(env,b) match {
         case Code(b1) =>
           reflectc(Run(b1, reifyc(evalms(env,e))))
@@ -234,6 +237,7 @@ object Base {
       }
     case Cons(e1,e2) =>
       // introduction form, needs explicit lifting
+      // (i.e. don't match on args)
       Tup(evalms(env,e1),evalms(env,e2))
     case Fst(e1) =>
       (evalms(env,e1)) match {
@@ -285,26 +289,31 @@ object Base {
     try a finally indent = save
   }
   def pretty(e: Exp, env: List[String]): String = e match {
-    case Lit(n) => n.toString
-    case Sym(n) => "'"+n
-    case Var(x) => try env(x) catch { case _ => "?" }
-    case IsNum(a) => s"(num? ${pretty(a,env)})"
-    case IsStr(a) => s"(sym? ${pretty(a,env)})"
-    case Lift(a) => s"(lift ${pretty(a,env)})"
-    case Fst(a) => s"(car ${pretty(a,env)})"
-    case Snd(a) => s"(cdr ${pretty(a,env)})"
-    case Equs(a,b) => s"(eq? ${pretty(a,env)} ${pretty(b,env)})"
-    case Plus(a,b) => s"(+ ${pretty(a,env)} ${pretty(b,env)})"
+    case Lit(n)     => n.toString
+    case Sym(n)     => "'"+n
+    case Var(x)     => try env(x) catch { case _ => "?" }
+    case IsNum(a)   => s"(num? ${pretty(a,env)})"
+    case IsStr(a)   => s"(sym? ${pretty(a,env)})"
+    case Lift(a)    => s"(lift ${pretty(a,env)})"
+    case Fst(a)     => s"(car ${pretty(a,env)})"
+    case Snd(a)     => s"(cdr ${pretty(a,env)})"
+    case Equs(a,b)  => s"(eq? ${pretty(a,env)} ${pretty(b,env)})"
+    case Plus(a,b)  => s"(+ ${pretty(a,env)} ${pretty(b,env)})"
     case Minus(a,b) => s"(- ${pretty(a,env)} ${pretty(b,env)})"
     case Times(a,b) => s"(* ${pretty(a,env)} ${pretty(b,env)})"
-    case Run(a,b) => s"(run ${pretty(a,env)} ${pretty(b,env)})"
-    case Log(a,b) => s"(log ${pretty(a,env)} ${pretty(b,env)})"
-    case App(a,b) => s"(${pretty(a,env)} ${pretty(b,env)})"
+    case Run(a,b)   => s"(run ${pretty(a,env)} ${pretty(b,env)})"
+    case Log(a,b)   => s"(log ${pretty(a,env)} ${pretty(b,env)})"
+    case App(a,b)   => s"(${pretty(a,env)} ${pretty(b,env)})"
     case Let(a,Var(n)) if n == env.length => pretty(a,env)
-    case Let(a,b) => s"${indent}(let x${env.length} ${block(pretty(a,env))} ${(pretty(b,env:+("x"+env.length)))})"
-    case Lam(e) => s"${indent}(lambda f${env.length} x${env.length+1} ${block(pretty(e,env:+("f"+env.length):+("x"+(env.length+1))))})"
-    case If(c,a,b) => s"${indent}(if ${pretty(c,env)} ${block(pretty(a,env))} ${indent}${block(pretty(b,env))})"
-    case _ => e.toString
+    case Let(a,b)   => s"${indent}(let x${env.length} ${block(pretty(a,env))} ${(pretty(b,env:+("x"+env.length)))})"
+    case Lam(e)     => s"${indent}(lambda f${env.length} x${env.length+1} ${block(pretty(e,env:+("f"+env.length):+("x"+(env.length+1))))})"
+    case If(c,a,b)  => s"${indent}(if ${pretty(c,env)} ${block(pretty(a,env))} ${indent}${block(pretty(b,env))})"
+    case _          => e.toString
+  }
+
+  var testsRun = 0
+  def testDone(): Unit = {
+    println(s"  Tests run: $testsRun"); testsRun = 0
   }
 
   def check(a:Any)(s:String) = if (a.toString.trim != s.trim) {
@@ -313,5 +322,45 @@ object Base {
     println("but got")
     println("    "+a)
     (new AssertionError).printStackTrace
+  } else testsRun += 1
+
+
+  // basic test cases
+  def test() = {
+    println("// ------- Base.test --------")
+    println("Staged factorial...")
+/*
+  pattern:
+    def f = fun { n => if (n != 0) f(n-1) else 1 }
+  corresponds to:
+    val f = { () => lift({ n => if (n != 0) f()(n-1) else 1 }) }
+
+*/
+    val f_self = App(Var(0),Lit(99))
+    val n = Var(3)
+
+    val fac_body = Lam(If(n,Times(n,App(f_self,Minus(n,Lift(Lit(1))))),Lift(Lit(1))))
+    val fac = App(Lam(Lift(fac_body)),Lit(99))
+    val code = reifyc(evalms(Nil,fac))
+    val out = 
+      Let(Lam(
+        Let(If(Var(1),
+              Let(Minus(Var(1),Lit(1)),
+              Let(App(Var(0),Var(2)),
+              Let(Times(Var(1),Var(3)),
+              Var(4)))),
+            /* else */
+              Lit(1)
+        ),
+        Var(2))),
+      Var(0))
+
+    check(code)(out.toString)
+
+    check(evalms(Nil,App(code,Lit(4))))("Cst(24)")
+
+    testDone()
   }
+
+
 }

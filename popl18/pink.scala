@@ -57,12 +57,14 @@ object Pink {
   val evalc_exp_anf = reify { anf(List(Sym("XX")),evalc_exp1) }
 
   def test() = {
+    println("// ------- Pink.test --------")
     testCorrectnessOptimality()
     testInstrumentation()
     testEM()
   }
 
   def testCorrectnessOptimality() = {
+    println("Correctness and optimality...")
     // direct execution
     checkrun(s"""
     (let fac $fac_src 
@@ -144,22 +146,28 @@ object Pink {
     (((eval eval_src) evalc_src) fac_src)))))""",
     prettycode(fac_exp_anf))
 
-    // confirming left of Figure 6
+    // confirming Figure 6 (left)
     check(prettycode(fac_exp_anf))("""(lambda f0 x1 
   (if x1 
     (let x2 (- x1 1) 
     (let x3 (f0 x2) (* x1 x3))) 
   1))""")
+
+    testDone()
   }
 
   val evt_poly_src = ev_poly_src.replace("(env exp)", "(if (eq? 'n exp) (log (maybe-lift 0) (env exp)) (env exp))")
   val trace_n_evalc_src = ev_nil(ev_lift(evt_poly_src))
+
   def testInstrumentation() = {
+    println("Instrumentation...")
+
     checkcode(s"""
     (let trace_n_evalc $trace_n_evalc_src
     (let fac_src       (quote $fac_src)
 
     (trace_n_evalc fac_src)))""",
+    // confirming Figure 6 (middle)
     """(lambda f0 x1 
   (let x2 (log 0 x1) 
   (if x2 
@@ -176,6 +184,8 @@ object Pink {
     ((run 0 (trace_n_evalc fac_src)) 3)))""",
     "Cst(6)",
     "Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+
+    testDone()
   }
 
   def addCases(cs: String*): String = {
@@ -194,7 +204,10 @@ object Pink {
   val emt_src = """((EM (((lambda ev exp (lambda _ env
      (if (if (sym? exp) (eq? 'n exp) 0) (log 0 ((eval exp) env)) (((tie ev) exp) env))))
      '(lambda f n (if n (* n (f (- n 1))) 1))) env)) 3)"""
+
   def testEM() = {
+    println("EM...")
+
     // sanity checks
     checkrun(s"""
     (let eval0     $eval0_src
@@ -219,6 +232,8 @@ object Pink {
     (let emt_src   (quote $emt_src)
     ((eval0 evaln_src) emt_src))))""", "Cst(6)",
     "Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);")
+
+    testDone()
   }
 }
 
@@ -251,6 +266,15 @@ object Pink_CPS {
   val evalc_src = ev_nil(ev_lift(ev_poly_src))
 
   def test() = {
+    println("// ------- Pink_CPS.test --------")
+
+    testBasics()
+    testEM()
+  }
+
+  def testBasics() {
+    println("Basics...")
+
     // interpretation of fac
     checkrun(s"""
     (let eval    $eval_src
@@ -260,7 +284,9 @@ object Pink_CPS {
     checkcode(s"""
     (let evalc   $evalc_src
     (let fac_src (quote $fac_src)
-    ((evalc fac_src) (lambda _ f f))))""", """(lambda f0 x1 
+    ((evalc fac_src) (lambda _ f f))))""",
+    // confirming Figure 6 (right)
+    """(lambda f0 x1 
   (lambda f2 x3 
     (if x1 
       (let x4 (- x1 1) 
@@ -295,7 +321,7 @@ object Pink_CPS {
     (let nested_src (quote $nested_src)
     (((run 0 ((evalc nested_src) (lambda _ f f))) 0) (lambda _ x x))))""", "Cst(2)")
 
-    testEM()
+    testDone()
   }
 
  def addCases(cs: String*): String = {
@@ -320,6 +346,8 @@ object Pink_CPS {
 (+ 3 (call/cc (lambda _ k (k (k (k 1)))))))
 """
   def testEM() = {
+    println("EM...")
+
     // sanity check
     checkrun(s"""
     (let eval0   $eval0_src
@@ -331,6 +359,8 @@ object Pink_CPS {
     (let eval0   $eval0_src
     (let emt_src (quote $emt_src)
     ((eval0 emt_src) (lambda _ x x))))""", "Cst(10)")
+
+    testDone()
   }
 }
 
@@ -377,10 +407,15 @@ object Pink_clambda {
   val fc_src = fac_src.replace("lambda", "clambda")
 
   def test_clambda() = {
+    println("clambda...")
+
+    // fac as clambda
     checkrun(s"""
     (let eval $eval_src
     (let fc_src (quote $fc_src)
     ((eval fc_src) 4)))""", "Cst(24)")
+
+    // fac as clambda -- check compiled code
     val c_fc = ev(s"""
     (let eval $eval_src
     (let fc_src (quote $fc_src)
@@ -391,6 +426,7 @@ object Pink_clambda {
   (let x3 (r x2) (* n x3))) 
 1)""") // all interpretation overhead is gone
 
+    // more clambda tests
     checkrun(s"((($eval_src (quote ( lambda _ x (clambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
     checkrun(s"((($eval_src (quote (clambda _ x ( lambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
     checkrun(s"((($eval_src (quote (clambda _ x (clambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
@@ -399,6 +435,7 @@ object Pink_clambda {
 
     val f_src = "(lambda _ x (clambda _ y (lambda _ l (* (l (+ x x)) (l y)))))"
     checkrun(s"(((($eval_src (quote $f_src)) 1) 4) (lambda _ z z))", "Cst(8)")
+    
     val c_f = ev(s"(($eval_src (quote $f_src)) 1)").asInstanceOf[Clo]
     check(c_f.env)("List()")
     check(pretty(c_f.e, List("_", "y")))("""(lambda f2 x3 
@@ -406,9 +443,14 @@ object Pink_clambda {
   (let x5 (x3 x4) 
   (let x6 (x3 y) (* x5 x6)))))""")
     checkcode(s"(((($eval_src (quote $f_src)) 1) 4) (lambda _ z (lift z)))", "(* 2 4)")
+
+    testDone()
   }
 
   def test_em() {
+    println("EM...")
+
+    // implement logging with EM
     val ev_log_src = ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log ((car l) 0) (env exp)) (env exp))")
     val fac4_trace = "Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);"
     def em1(src: String) = s"(EM ((($ev_log_src l) '($src 4)) env))"
@@ -420,9 +462,12 @@ object Pink_clambda {
     checkrunlog(s"($eval_src '${em1(fc_src)})" , "Cst(24)", fac4_trace)
     checkrunlog(s"($eval_src '${em2(fac_src)})", "Cst(24)", fac4_trace)
     checkrunlog(s"($eval_src '${em2(fc_src)})" , "Cst(24)", fac4_trace)
+
+    testDone()
   }
 
   def test() = {
+    println("// ------- Pink_clambda.test --------")
     test_clambda()
     test_em()
   }
