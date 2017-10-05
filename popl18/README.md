@@ -1,41 +1,52 @@
 # Collapsing Towers of Interpreters
 
+This is the artifact package for the corresponding POPL 2018 paper ([PDF](http://lampwww.epfl.ch/~amin/drafts/collapsing.pdf)).
+
 We are concerned with the following challenge: given a sequence of programming
 languages `L_0,...,L_n` and interpreters for `L_i+1` written in `L_i`, derive
 a compiler from `L_n` to `L_0`. This compiler should be one-pass, and it should be
 optimal in the sense that the translation removes all interpretive overhead of the
 intermediate languages.
 
-# Multi-level core language λ↑↓ in PLT Redex
+We first summarize the contents of the artifact package and provide instructions
+how to run the test cases and examples. Afterwards, we detail the relation between
+the paper and the code in this package.
 
-## Code
+# Contents
+
+## Multi-level core language λ↑↓ in PLT Redex
+
+### Code
 * __[`core.rkt`](core.rkt)__ defines the multi-level core language λ↑↓ as a PLT Redex model, using a small-step operational semantics.
-* __[`core-exs.rkt`](core.rkt)__ defines some examples to exercise the semantics.
+* __[`core-exs.rkt`](core.rkt)__ defines examples and test cases to exercise the semantics.
 
-## Run
+### Run
 Run `core-exs.rkt` in [DrRacket](https://racket-lang.org/).
 
-# Pink in Scala
+## Pink in Scala
 
-## Code
+### Code
 * __[`base.scala`](base.scala)__ defines the multi-level core language λ↑↓ as a definitional interpreter in Scala.
-* __[`lisp.scala`](lisp.scala)__ defines a LISP front end.
+* __[`lisp.scala`](lisp.scala)__ defines a LISP-like front end.
 * __[`pink.scala`](pink.scala)__ defines meta-circular stage-parametric interpreters for Pink.
-* __[`matcher.scala`](matcher.scala)__ defines a regular expression matcher on top of LISP front end & Pink.
+* __[`matcher.scala`](matcher.scala)__ defines a regular expression matcher on top of LISP-like front end & Pink.
 * __[`bench.scala`](bench.scala)__ defines a microbenchmark for comparing evaluation and compilation in Pink.
 
-## Run
+### Run
 Run `sbt run` using Scala's [SBT](http://www.scala-sbt.org/).
 
 Modify [`test-main.scala`](test-main.scala) to run more or fewer tests and benchmarks.
 
-# Pink in Scheme
+## Pink in Scheme
 available at [namin/pink](https://github.com/namin/pink), here referred to as `pink-scheme`.
 
-# Purple
+## Purple
 available at [namin/lms-black](https://github.com/namin/lms-black), here referred to as `purple`.
 
-# Paper ([PDF](http://lampwww.epfl.ch/~amin/drafts/collapsing.pdf))
+# Relation to the Paper ([PDF](http://lampwww.epfl.ch/~amin/drafts/collapsing.pdf))
+
+In the following, we detail how sections, figures, and claims from the paper are reflected in the artifact package.
+
 ## 3 Multi-Level Core Language λ↑↓
 * __Fig. 1__ corresponds to PLT Redex development in [`core.rkt`](core.rkt).
 * __Fig. 2__ is a subset of the Scala development in [`base.scala`](base.scala). The alternative Scheme development is at [`pink-scheme/base.scm`](https://github.com/namin/pink/blob/master/base.scm).
