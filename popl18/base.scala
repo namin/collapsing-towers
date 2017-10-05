@@ -139,6 +139,8 @@ object Base {
       val (Code(u),Code(v)) = (a,b)
       reflect(Cons(u,v))
     case Clo(env2,e2) => // function
+      // NOTE: We memoize functions here. This is not essential, and 
+      // could be removed, yielding exactly the code shown in the paper.
       stFun collectFirst { case (n,`env2`,`e2`) => n } match {
         case Some(n) =>
           Var(n)
@@ -309,11 +311,56 @@ object Base {
     case _          => e.toString
   }
 
+  var testsRun = 0
+  def testDone(): Unit = {
+    println(s"  Tests run: $testsRun"); testsRun = 0
+  }
+
   def check(a:Any)(s:String) = if (a.toString.trim != s.trim) {
     println("error: expected ")
     println("    "+s)
     println("but got")
     println("    "+a)
     (new AssertionError).printStackTrace
+  } else testsRun += 1
+
+
+  // basic test cases
+  def test() = {
+    println("// ------- Base.test --------")
+    println("Staged factorial...")
+/*
+  pattern:
+    def f = fun { n => if (n != 0) f(n-1) else 1 }
+  corresponds to:
+    val f = { () => lift({ n => if (n != 0) f()(n-1) else 1 }) }
+
+*/
+    val f_self = App(Var(0),Lit(99))
+    val n = Var(3)
+
+    val fac_body = Lam(If(n,Times(n,App(f_self,Minus(n,Lift(Lit(1))))),Lift(Lit(1))))
+    val fac = App(Lam(Lift(fac_body)),Lit(99))
+    val code = reifyc(evalms(Nil,fac))
+    val out = 
+      Let(Lam(
+        Let(If(Var(1),
+              Let(Minus(Var(1),Lit(1)),
+              Let(App(Var(0),Var(2)),
+              Let(Times(Var(1),Var(3)),
+              Var(4)))),
+            /* else */
+              Lit(1)
+        ),
+        Var(2))),
+      Var(0))
+
+    check(code)(out.toString)
+
+    check(evalms(Nil,App(code,Lit(4))))("Cst(24)")
+
+    testDone()
   }
+
+
 }

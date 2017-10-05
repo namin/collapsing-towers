@@ -25,6 +25,8 @@ match)))"""
   val matcherc_src = s"(let maybe-lift (lambda _  e (lift e)) $matcher_poly_src)"
 
   def test() = {
+    println("// ------- Matcher.test --------")
+
     checkrun(s"(($matcher_src '(_ * a _ * done)) '(b a done))", "Str(yes)")
     checkrun(s"(($matcher_src '(_ * a _ * done)) '(b b done))", "Str(no)")
     checkrun(s"((run 0 ($matcherc_src '(_ * a _ * done))) '(b a done))", "Str(yes)")
@@ -90,5 +92,7 @@ match)))"""
     checkrunlog(s"((run 0 ((run 0 ($instrc_src '$matcherc_src)) '(a b done))) '(a b done))", "Str(yes)", logres)
     checkcode(s"(($instr2_src '$matcherc_src) '(a b done))", log_ab_code)
     checkcode(s"((run 0 ($instrc_src '$matcherc_src)) '(a b done))", log_ab_code)
+
+    testDone()
   }
 }

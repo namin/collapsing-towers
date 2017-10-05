@@ -16,6 +16,7 @@ object Bench {
   }
 
   def test() = {
+    println("// ------- Bench.test --------")
     println("fac #,evaluated,compiled,traced evaluated,traced compiled")
     val oldLog = Base.log
     try {
