@@ -409,10 +409,13 @@ object Pink_clambda {
   def test_clambda() = {
     println("clambda...")
 
+    // fac as clambda
     checkrun(s"""
     (let eval $eval_src
     (let fc_src (quote $fc_src)
     ((eval fc_src) 4)))""", "Cst(24)")
+
+    // fac as clambda -- check compiled code
     val c_fc = ev(s"""
     (let eval $eval_src
     (let fc_src (quote $fc_src)
@@ -423,6 +426,7 @@ object Pink_clambda {
   (let x3 (r x2) (* n x3))) 
 1)""") // all interpretation overhead is gone
 
+    // more clambda tests
     checkrun(s"((($eval_src (quote ( lambda _ x (clambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
     checkrun(s"((($eval_src (quote (clambda _ x ( lambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
     checkrun(s"((($eval_src (quote (clambda _ x (clambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
@@ -431,6 +435,7 @@ object Pink_clambda {
 
     val f_src = "(lambda _ x (clambda _ y (lambda _ l (* (l (+ x x)) (l y)))))"
     checkrun(s"(((($eval_src (quote $f_src)) 1) 4) (lambda _ z z))", "Cst(8)")
+    
     val c_f = ev(s"(($eval_src (quote $f_src)) 1)").asInstanceOf[Clo]
     check(c_f.env)("List()")
     check(pretty(c_f.e, List("_", "y")))("""(lambda f2 x3 
@@ -445,6 +450,7 @@ object Pink_clambda {
   def test_em() {
     println("EM...")
 
+    // implement logging with EM
     val ev_log_src = ev_tie_src.replace("(env exp)", "(if (eq? 'n exp) (log ((car l) 0) (env exp)) (env exp))")
     val fac4_trace = "Cst(4);Cst(4);Cst(4);Cst(3);Cst(3);Cst(3);Cst(2);Cst(2);Cst(2);Cst(1);Cst(1);Cst(1);Cst(0);"
     def em1(src: String) = s"(EM ((($ev_log_src l) '($src 4)) env))"
