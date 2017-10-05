@@ -194,7 +194,7 @@ object Pink {
   }
 
   val ev0_poly_src = addCases(
-    "(if (eq? 'EM (car exp)) (exec (maybe-lift 0) (trans (car (cdr exp))))")
+    "(if (eq? 'EM (car exp)) (run (maybe-lift 0) (trans (car (cdr exp))))")
   val evn_poly_src = addCases(
     "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
 
@@ -330,7 +330,7 @@ object Pink_CPS {
   }
 
   val ev0_poly_src = addCases(
-    "(if (eq? 'EM (car exp)) (exec (maybe-lift 0) (trans (car (cdr exp))))")
+    "(if (eq? 'EM (car exp)) (run (maybe-lift 0) (trans (car (cdr exp))))")
   val evn_poly_src = addCases(
     "(if (eq? 'EM (car exp)) (let e (car (cdr exp)) (EM ((eval (env 'e)) env)))")
 
@@ -390,12 +390,11 @@ object Pink_clambda {
     (if (eq?  'cdr    (car exp))   (cdr  (((eval l) (cadr exp)) env))
     (if (eq?  'cons   (car exp))   ((car l) (cons (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env)))
     (if (eq?  'quote  (car exp))   ((car l) (cadr exp))
-    (if (eq?  'exec   (car exp))   (exec (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'run    (car exp))   (run (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
     (if (eq?  'log    (car exp))   (log (((eval l) (cadr exp)) env) (((eval l) (caddr exp)) env))
-    (if (eq?  'EM     (car exp))   (exec ((car l) 0) (trans (car (cdr exp))))
+    (if (eq?  'EM     (car exp))   (run ((car l) 0) (trans (car (cdr exp))))
     (if (eq?  'trans (car exp))   (trans (cadr exp))
-    ((env (car exp)) (((eval l) (cadr exp)) env))))))))))))))))))))))))
+    ((env (car exp)) (((eval l) (cadr exp)) env)))))))))))))))))))))))
   ((((eval l) (car exp)) env) (((eval l) (cadr exp)) env)))))))))
 """
 
@@ -420,10 +419,9 @@ object Pink_clambda {
     (let eval $eval_src
     (let fc_src (quote $fc_src)
     (eval fc_src)))""").asInstanceOf[Clo]
-    check(c_fc.env)("List()")
-    check(pretty(c_fc.e, List("r", "n")))("""(if n 
-  (let x2 (- n 1) 
-  (let x3 (r x2) (* n x3))) 
+    check(pretty(c_fc.e, List.fill(c_fc.env.length)("<?>")++List("r", "n")))("""(if n 
+  (let x16 (- n 1) 
+  (let x17 (r x16) (* n x17))) 
 1)""") // all interpretation overhead is gone
 
     // more clambda tests
@@ -437,11 +435,10 @@ object Pink_clambda {
     checkrun(s"(((($eval_src (quote $f_src)) 1) 4) (lambda _ z z))", "Cst(8)")
     
     val c_f = ev(s"(($eval_src (quote $f_src)) 1)").asInstanceOf[Clo]
-    check(c_f.env)("List()")
-    check(pretty(c_f.e, List("_", "y")))("""(lambda f2 x3 
-  (let x4 (+ <special> <special>) 
-  (let x5 (x3 x4) 
-  (let x6 (x3 y) (* x5 x6)))))""")
+    check(pretty(c_f.e, List.fill(c_f.env.length)("<?>")++List("_", "y")))("""(lambda f16 x17 
+  (let x18 (+ <special> <special>) 
+  (let x19 (x17 x18) 
+  (let x20 (x17 y) (* x19 x20)))))""")
     checkcode(s"(((($eval_src (quote $f_src)) 1) 4) (lambda _ z (lift z)))", "(* 2 4)")
 
     testDone()

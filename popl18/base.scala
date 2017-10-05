@@ -171,8 +171,8 @@ object Base {
         case Code(b1) =>
           reflectc(Run(b1, reifyc(evalms(env,e))))
         case _ =>
-          val code = reifyc(evalms(env, e))
-          reifyv(evalms(Nil, code))
+          val code = reifyc({ stFresh = env.length; evalms(env, e) })
+          reifyv(evalms(env, code))
       }
 
     case Log(b,e) =>
