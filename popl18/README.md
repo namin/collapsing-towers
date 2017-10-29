@@ -18,7 +18,7 @@ the paper and the code in this package.
 
 ### Code
 * __[`core.rkt`](core.rkt)__ defines the multi-level core language λ↑↓ as a PLT Redex model, using a small-step operational semantics.
-* __[`core-exs.rkt`](core.rkt)__ defines examples and test cases to exercise the semantics.
+* __[`core-exs.rkt`](core-exs.rkt)__ defines examples and test cases to exercise the semantics.
 
 ### Run
 Run `core-exs.rkt` in [DrRacket](https://racket-lang.org/).
