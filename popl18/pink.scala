@@ -4,7 +4,7 @@ import Base._
 import Lisp._
 
 object PinkBase {
-  val fac_src = "(lambda f n (if n (* n (f (- n 1))) 1))"
+  val fac_src = "(lambda f n (if (eq? n 0) 1 (* n (f (- n 1)))))"
   val fac_val = parseExp(fac_src)
   val fac_exp = trans(fac_val,List("arg"))
   val fac_exp_anf = reify { anf(List(Sym("XX")),fac_exp) }
@@ -148,10 +148,11 @@ object Pink {
 
     // confirming Figure 6 (left)
     check(prettycode(fac_exp_anf))("""(lambda f0 x1 
-  (if x1 
-    (let x2 (- x1 1) 
-    (let x3 (f0 x2) (* x1 x3))) 
-  1))""")
+  (let x2 (eq? x1 0) 
+  (if x2 1 
+  
+    (let x3 (- x1 1) 
+    (let x4 (f0 x3) (* x1 x4))))))""")
 
     testDone()
   }
@@ -170,12 +171,13 @@ object Pink {
     // confirming Figure 6 (middle)
     """(lambda f0 x1 
   (let x2 (log 0 x1) 
-  (if x2 
-    (let x3 (log 0 x1) 
+  (let x3 (eq? x2 0) 
+  (if x3 1 
+  
     (let x4 (log 0 x1) 
-    (let x5 (- x4 1) 
-    (let x6 (f0 x5) (* x3 x6))))) 
-  1)))""")
+    (let x5 (log 0 x1) 
+    (let x6 (- x5 1) 
+    (let x7 (f0 x6) (* x4 x7)))))))))""")
 
     checkrunlog(s"""
     (let trace_n_evalc $trace_n_evalc_src
@@ -288,13 +290,14 @@ object Pink_CPS {
     // confirming Figure 6 (right)
     """(lambda f0 x1 
   (lambda f2 x3 
-    (if x1 
-      (let x4 (- x1 1) 
-      (let x5 (f0 x4) 
-      (let x6 
-        (lambda f6 x7 
-          (let x8 (* x1 x7) (x3 x8))) (x5 x6)))) 
-    (x3 1))))""")
+    (let x4 (eq? x1 0) 
+    (if x4 (x3 1) 
+    
+      (let x5 (- x1 1) 
+      (let x6 (f0 x5) 
+      (let x7 
+        (lambda f7 x8 
+          (let x9 (* x1 x8) (x3 x9))) (x6 x7))))))))""")
     checkrun(s"""
     (let evalc   $evalc_src
     (let fac_src (quote $fac_src)
@@ -419,10 +422,11 @@ object Pink_clambda {
     (let eval $eval_src
     (let fc_src (quote $fc_src)
     (eval fc_src)))""").asInstanceOf[Clo]
-    check(pretty(c_fc.e, List.fill(c_fc.env.length)("<?>")++List("r", "n")))("""(if n 
-  (let x16 (- n 1) 
-  (let x17 (r x16) (* n x17))) 
-1)""") // all interpretation overhead is gone
+    check(pretty(c_fc.e, List.fill(c_fc.env.length)("<?>")++List("r", "n")))("""(let x16 (eq? n 0) 
+(if x16 1 
+
+  (let x17 (- n 1) 
+  (let x18 (r x17) (* n x18)))))""") // all interpretation overhead is gone
 
     // more clambda tests
     checkrun(s"((($eval_src (quote ( lambda _ x (clambda _ y (* (+ x x) y))))) 1) 4)", "Cst(8)")
