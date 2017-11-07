@@ -15,7 +15,7 @@ object Base {
   case class Plus(a:Exp,b:Exp) extends Exp
   case class Minus(a:Exp,b:Exp) extends Exp
   case class Times(a:Exp,b:Exp) extends Exp
-  case class Equs(a:Exp,b:Exp) extends Exp
+  case class Equ(a:Exp,b:Exp) extends Exp
   case class Cons(a:Exp,b:Exp) extends Exp
   case class Fst(a:Exp) extends Exp
   case class Snd(a:Exp) extends Exp
@@ -85,8 +85,8 @@ object Base {
       reflect(Times(anf(env,e1),anf(env,e2)))
     case Minus(e1,e2) =>
       reflect(Minus(anf(env,e1),anf(env,e2)))
-    case Equs(e1,e2) =>
-      reflect(Equs(anf(env,e1),anf(env,e2)))
+    case Equ(e1,e2) =>
+      reflect(Equ(anf(env,e1),anf(env,e2)))
     case Cons(e1,e2) =>
       reflect(Cons(anf(env,e1),anf(env,e2)))
     case IsNum(e) =>
@@ -228,12 +228,12 @@ object Base {
         case (Code(s1),Code(s2)) =>
           reflectc(Times(s1,s2))
       }
-    case Equs(e1,e2) =>
+    case Equ(e1,e2) =>
       (evalms(env,e1), evalms(env,e2)) match {
-        case (Str(s1), Str(s2)) =>
-          Cst(if (s1 == s2) 1 else 0)
+        case (v1, v2) if !v1.isInstanceOf[Code] && !v2.isInstanceOf[Code] =>
+          Cst(if (v1 == v2) 1 else 0)
         case (Code(s1),Code(s2)) =>
-          reflectc(Equs(s1,s2))
+          reflectc(Equ(s1,s2))
       }
     case Cons(e1,e2) =>
       // introduction form, needs explicit lifting
@@ -297,7 +297,7 @@ object Base {
     case Lift(a)    => s"(lift ${pretty(a,env)})"
     case Fst(a)     => s"(car ${pretty(a,env)})"
     case Snd(a)     => s"(cdr ${pretty(a,env)})"
-    case Equs(a,b)  => s"(eq? ${pretty(a,env)} ${pretty(b,env)})"
+    case Equ(a,b)   => s"(eq? ${pretty(a,env)} ${pretty(b,env)})"
     case Plus(a,b)  => s"(+ ${pretty(a,env)} ${pretty(b,env)})"
     case Minus(a,b) => s"(- ${pretty(a,env)} ${pretty(b,env)})"
     case Times(a,b) => s"(* ${pretty(a,env)} ${pretty(b,env)})"
