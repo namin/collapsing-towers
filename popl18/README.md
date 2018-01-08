@@ -1,12 +1,24 @@
 # Collapsing Towers of Interpreters
 
-This is the artifact package for the corresponding POPL 2018 paper ([PDF](http://lampwww.epfl.ch/~amin/drafts/collapsing.pdf)).
+This is the artifact package for the corresponding POPL 2018 paper ([PDF](http://lampwww.epfl.ch/~amin/pub/collapsing-towers.pdf)).
+
+## Abstract
+
+Given a tower of interpreters, i.e., a sequence of multiple interpreters interpreting one another as input programs, we aim to collapse this tower into a compiler that removes all interpretive overhead and runs in a single pass. In the real world, a use case might be Python code executed by an x86 runtime, on a CPU emulated in a JavaScript VM, running on an ARM CPU. Collapsing such a tower can not only exponentially improve runtime performance, but also enable the use of base-language tools for interpreted programs, e.g., for analysis and verification. In this paper, we lay the foundations in an idealized but realistic setting.
+
+We present a multi-level lambda calculus that features staging constructs and stage polymorphism: based on runtime parameters, an evaluator either executes source code (thereby acting as an interpreter) or generates code (thereby acting as a compiler). We identify stage polymorphism, a programming model from the domain of high-performance program generators, as the key mechanism to make such interpreters compose in a collapsible way.
+
+We present Pink, a meta-circular Lisp-like evaluator on top of this calculus, and demonstrate that we can collapse arbitrarily many levels of self-interpretation, including levels with semantic modi cations. We discuss several examples: compiling regular expressions through an interpreter to base code, building program transformers from modified interpreters, and others. We develop these ideas further to include re reflection and reification, culminating in Purple, a reflective language inspired by Brown, Blond, and Black, which realizes a conceptually infinite tower, where every aspect of the semantics can change dynamically. Addressing an open challenge, we show how user programs can be compiled and recompiled under user-modified semantics.
+
+## Challenge
 
 We are concerned with the following challenge: given a sequence of programming
 languages `L_0,...,L_n` and interpreters for `L_i+1` written in `L_i`, derive
 a compiler from `L_n` to `L_0`. This compiler should be one-pass, and it should be
 optimal in the sense that the translation removes all interpretive overhead of the
 intermediate languages.
+
+## Overview
 
 We first summarize the contents of the artifact package and provide instructions
 how to run the test cases and examples. Afterwards, we detail the relation between
@@ -43,7 +55,7 @@ available at [namin/pink](https://github.com/namin/pink), here referred to as `p
 ## Purple
 available at [namin/lms-black](https://github.com/namin/lms-black), here referred to as `purple`.
 
-# Relation to the Paper ([PDF](http://lampwww.epfl.ch/~amin/drafts/collapsing.pdf))
+# Relation to the Paper ([PDF](http://lampwww.epfl.ch/~amin/pub/collapsing-towers.pdf))
 
 In the following, we detail how sections, figures, and claims from the paper are reflected in the artifact package.
 
