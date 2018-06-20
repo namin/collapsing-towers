@@ -2,12 +2,14 @@ object TestMain {
   import Base._
   import Lisp._
   import Matches._
+  import Bytecode._
 
   def main(args: Array[String]) {
     //testBase()
     //testLisp()
-    testPink()
+    //testPink()
     //benchmarks()
+    testBytecode()
   }
 
   def benchmarks() {
@@ -45,4 +47,9 @@ object TestMain {
     // disable Pink_macro by default because they require stack
     //Pink_macro.test()
   }
+
+  def testBytecode() {
+    testBasicBC()
+  }
+
 }
