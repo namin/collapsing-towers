@@ -305,6 +305,8 @@ object Base {
       (evalms(env,e1), evalms(env,e2)) match {
         case (Str(s1), Str(s2)) =>
           Cst(if (s1 == s2) 1 else 0)
+        case (Cst(s1), Cst(s2)) =>
+          Cst(if (s1 == s2) 1 else 0)
         case (Code(s1),Code(s2)) =>
           reflectc(Equs(s1,s2))
       }
