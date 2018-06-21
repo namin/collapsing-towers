@@ -5,6 +5,19 @@ import parser._
 
 /* WORK IN PROGRESS ON BYTECODE INTERPRETATION */
 
+/*
++ 1) bytecode interpreter
++ 2) run factorial
++     loop + accumulator
+-     extend to handle function calls (?)
+- 3) stage-polymorphic bytecode interpreter
+- 4) extract fac code, dissolving bytecode level
+
+- 5) metacircular evaluator
+- 6) dissolve multiple interpretation levels
+*/
+
+
 object Bytecode {
 
   def testBasicBC(): Unit = {
@@ -49,19 +62,17 @@ object Bytecode {
     """)
     // expect 5
 
+    run(s"""
+    (let ex $exec_src
+    (let prog (quote $test_src4)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect 24
 
   }
-
-/*
-  Need: 
-  - arithmetic stack
-  - labels & jumps
-
-  State:
-  - pc
-  - stack
-*/
-
 
 val test_src1 = commonReplace("""
 (
@@ -90,7 +101,7 @@ val test_src3 = commonReplace("""
   (L0 (
     (cst 2)
     (cst 3)
-    (get 1000) ;; dup from base sp
+    (gets 1) ;; dup value 2
     (jif L1 L2)))
   (L1 (
     (+)
@@ -100,6 +111,41 @@ val test_src3 = commonReplace("""
     (halt)))
 )
 """)
+
+// factorial (tail recursive but growing stack -- don't bother mutating stuff in place ...)
+val test_src4 = commonReplace("""
+(
+  (L0 (
+    (cst 4)
+    (cst 1)
+    (jmp L1)))
+  (L1 (;;loop(n,acc)
+    (gets 1);; n
+    (jif L2 L3)))
+  (L2 (;;n != 0
+    (gets 1);; n
+    (cst 1)
+    (-)
+    (gets 1);; acc
+    (gets 3);; n
+    (*)
+    (jmp L1))) ;;loop(n-1,acc*n)
+  (L3 (;;n == 0
+    (halt))) ;;return acc
+)
+""")
+
+
+/*
+  Need: 
+  - arithmetic stack
+  - labels & jumps
+
+  State:
+  - program + pc
+  - memory + sp
+*/
+
 
 val exec_src = commonReplace("""
 (lambda exc prog (lambda _ pc (lambda _ mem (lambda _ sp
@@ -118,7 +164,8 @@ val exec_src = commonReplace("""
   (let loop (lambda loop block (lambda _ mem (lambda _ sp
     (let exp (car block)
     (if (eq?  'cst    (car exp))    (((loop (cdr block)) (((update mem) sp) (cadr exp))) (+ sp 1))
-    (if (eq?  'get    (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (cadr exp)))) (+ sp 1))
+    (if (eq?  'geta   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (cadr exp)))) (+ sp 1))
+    (if (eq?  'gets   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (- (- sp 1) (cadr exp))))) (+ sp 1))
     (if (eq?  '+      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (+ (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
     (if (eq?  '-      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (- (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
     (if (eq?  '*      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (* (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
@@ -126,47 +173,10 @@ val exec_src = commonReplace("""
     (if (eq?  'halt   (car exp))    (mem (- sp 1))
     (if (eq?  'jmp    (car exp))    ((((exc prog) (cadr exp)) mem) sp)
     (if (eq?  'jif    (car exp))    (if (mem (- sp 1)) ((((exc prog) (cadr exp)) mem) (- sp 1)) ((((exc prog) (caddr exp)) mem) (- sp 1)))
-    'eob))))))))))))) ;; failure, end of block
+    'eob)))))))))))))) ;; failure, end of block
   ;;((find-block prog) pc)
   (((loop ((find-block prog) pc)) mem) sp)
   ))))))))
 """)
-
-
-
-
-
-
-
-/*
-  i = 0
-  while (i < n) {
-    i = i + 1
-  }
-  return i
-
-L0:
-  (const 0)
-  (write i)
-L1:
-  (read i)
-  (read n)
-  (<)
-  (not)
-  (jnz L2)
-  (read i)
-  (const 1)
-  (+)
-  (write i)
-  (jmp L1)
-L2:
-  (read i)
-  (halt)
-*/
-
-
-  def testFacBC(): Unit = {
-    
-  }
 
 }
