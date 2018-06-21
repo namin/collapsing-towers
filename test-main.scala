@@ -50,6 +50,8 @@ object TestMain {
 
   def testBytecode() {
     testBasicBC()
+    testBasicTraceBC()
+    testBasicCompBC()
   }
 
 }

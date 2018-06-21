@@ -11,10 +11,27 @@ import parser._
 +     loop + accumulator
 -     extend to handle function calls (?)
 - 3) stage-polymorphic bytecode interpreter
++     pure tracing
+-     lift basic blocks as functions
+-     memoization for recursion
 - 4) extract fac code, dissolving bytecode level
 
 - 5) metacircular evaluator
 - 6) dissolve multiple interpretation levels
+*/
+
+/*
+TODO: 
+  - to support recursion, memory needs to 
+    be dynamic
+
+Questions:
+  - what exactly should be dynamic?
+      contents of memory
+      entire memory, addresses, sp
+
+  - PyPy paper has a register-based evaluator: 
+    https://www3.hhu.de/stups/downloads/pdf/BoCuFiRi09_246.pdf
 */
 
 
@@ -73,6 +90,129 @@ object Bytecode {
     // expect 24
 
   }
+
+  def testBasicTraceBC(): Unit = {
+    println("// ------- test basic bytecode tracing (do not lift blocks) --------")
+    
+    def run(src: String) = {
+      val prog_src = s"""(let exec-quote (lambda _ src (exec (trans-quote src))) $src)"""
+      val prog_val = parseExp(prog_src)
+      val prog_exp = trans(prog_val,Nil)
+      val res = reifyv(evalms(Nil,prog_exp))
+      res match {
+        case Code(e) => println(pretty(e,Nil))
+        case res => println(res)
+      }
+      res
+    }
+
+    run(s"""
+    (let ex $exec_trace_src
+    (let prog (quote $test_src1)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect (2+3)
+
+    run(s"""
+    (let ex $exec_trace_src
+    (let prog (quote $test_src2)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect (2+3)
+
+    run(s"""
+    (let ex $exec_trace_src
+    (let prog (quote $test_src3)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect (if (2) (2 + 3) else (2 * 3))
+
+/* NOTE: cannot trace loops/recursion (diverge)
+    run(s"""
+    (let ex $exec_comp_src
+    (let prog (quote $test_src4)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect ...
+*/
+  }
+
+  def testBasicCompBC(): Unit = {
+    println("// ------- test basic bytecode compilation --------")
+    
+    def run(src: String) = {
+      val prog_src = s"""(let exec-quote (lambda _ src (exec (trans-quote src))) $src)"""
+      val prog_val = parseExp(prog_src)
+      val prog_exp = trans(prog_val,Nil)
+      val res = reifyv(evalms(Nil,prog_exp))
+      res match {
+        case Code(e) => println(pretty(e,Nil))
+        case res => println(res)
+      }
+      res
+    }
+
+    run(s"""
+    (let ex $exec_comp_src
+    (let prog (quote $test_src1)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect let L0 = (\_. (2+3)) in (L0 _)
+
+    run(s"""
+    (let ex $exec_comp_src
+    (let prog (quote $test_src2)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect let L0 = (let L1 = (\_. (2+3)) in (L1 _)) in (L0 _)
+
+    run(s"""
+    (let ex $exec_comp_src
+    (let prog (quote $test_src3)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect let L0 = 
+    //  if (2) (let L1 = (\_. (2+3)) in (L1 _))
+    //  else   (let L2 = (\_. (2*3)) in (L2 _))
+    // in (L0 _)
+    // 
+    // NOTE how functions becomes nested. We will have (a lot of) duplication
+    // for control flow joins.
+
+/* TODO: need to figure out memory story
+    run(s"""
+    (let ex $exec_comp_src
+    (let prog (quote $test_src4)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect ...
+*/
+  }
+
 
 val test_src1 = commonReplace("""
 (
@@ -147,7 +287,7 @@ val test_src4 = commonReplace("""
 */
 
 
-val exec_src = commonReplace("""
+val exec_poly_src = commonReplace("""
 (lambda exc prog (lambda _ pc (lambda _ mem (lambda _ sp
   ;; generic list lookup: find (eq? a) (a b) = a
   (let find (lambda find p (lambda _ xs
@@ -163,7 +303,7 @@ val exec_src = commonReplace("""
   ;; exec basic block, e.g. ((cst 0) (+) (jmp L1))
   (let loop (lambda loop block (lambda _ mem (lambda _ sp
     (let exp (car block)
-    (if (eq?  'cst    (car exp))    (((loop (cdr block)) (((update mem) sp) (cadr exp))) (+ sp 1))
+    (if (eq?  'cst    (car exp))    (((loop (cdr block)) (((update mem) sp) (maybe-lift (cadr exp)))) (+ sp 1))
     (if (eq?  'geta   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (cadr exp)))) (+ sp 1))
     (if (eq?  'gets   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (- (- sp 1) (cadr exp))))) (+ sp 1))
     (if (eq?  '+      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (+ (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
@@ -175,8 +315,20 @@ val exec_src = commonReplace("""
     (if (eq?  'jif    (car exp))    (if (mem (- sp 1)) ((((exc prog) (cadr exp)) mem) (- sp 1)) ((((exc prog) (caddr exp)) mem) (- sp 1)))
     'eob)))))))))))))) ;; failure, end of block
   ;;((find-block prog) pc)
-  (((loop ((find-block prog) pc)) mem) sp)
-  ))))))))
+  (let exc-block (maybe-lift-block (lambda _ _
+    (((loop ((find-block prog) pc)) mem) sp)))
+  (exc-block (maybe-lift-block '_))
+  )))))))))
 """)
+
+val exec_src = exec_poly_src
+                .replace("maybe-lift-block", "(lambda _ x x)")
+                .replace("maybe-lift", "(lambda _ x x)")
+val exec_trace_src = exec_poly_src
+                .replace("maybe-lift-block", "(lambda _ x x)")
+                .replace("maybe-lift", "lift")
+val exec_comp_src = exec_poly_src
+                .replace("maybe-lift-block", "lift")
+                .replace("maybe-lift", "lift")
 
 }
