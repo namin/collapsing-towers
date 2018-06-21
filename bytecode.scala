@@ -39,6 +39,15 @@ object Bytecode {
     """)
     // expect 5
 
+    run(s"""
+    (let ex $exec_src
+    (let prog (quote $test_src3)
+    (let pc 'L0
+    (let mem 'nil
+    (let sp 1000
+    ((((ex prog) pc) mem) sp))))))
+    """)
+    // expect 5
 
 
   }
@@ -76,6 +85,22 @@ val test_src2 = commonReplace("""
 )
 """)
 
+val test_src3 = commonReplace("""
+(
+  (L0 (
+    (cst 2)
+    (cst 3)
+    (get 1000) ;; dup from base sp
+    (jif L1 L2)))
+  (L1 (
+    (+)
+    (halt)))
+  (L2 (
+    (*)
+    (halt)))
+)
+""")
+
 val exec_src = commonReplace("""
 (lambda exc prog (lambda _ pc (lambda _ mem (lambda _ sp
   ;; generic list lookup: find (eq? a) (a b) = a
@@ -93,10 +118,15 @@ val exec_src = commonReplace("""
   (let loop (lambda loop block (lambda _ mem (lambda _ sp
     (let exp (car block)
     (if (eq?  'cst    (car exp))    (((loop (cdr block)) (((update mem) sp) (cadr exp))) (+ sp 1))
+    (if (eq?  'get    (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (cadr exp)))) (+ sp 1))
     (if (eq?  '+      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (+ (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
+    (if (eq?  '-      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (- (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
+    (if (eq?  '*      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (* (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
+    (if (eq?  '=      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (eq? (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
     (if (eq?  'halt   (car exp))    (mem (- sp 1))
     (if (eq?  'jmp    (car exp))    ((((exc prog) (cadr exp)) mem) sp)
-    'eob)))))))) ;; failure, end of block
+    (if (eq?  'jif    (car exp))    (if (mem (- sp 1)) ((((exc prog) (cadr exp)) mem) (- sp 1)) ((((exc prog) (caddr exp)) mem) (- sp 1)))
+    'eob))))))))))))) ;; failure, end of block
   ;;((find-block prog) pc)
   (((loop ((find-block prog) pc)) mem) sp)
   ))))))))
