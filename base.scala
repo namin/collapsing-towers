@@ -26,6 +26,7 @@ object Base {
   case class RefRead(a:Exp) extends Exp
   case class RefWrite(a:Exp,e:Exp) extends Exp
   case class RefExt(c: Cell) extends Exp
+  case class FunUpd(a:Exp,b:Exp,c:Exp) extends Exp
 
   case class Lift(e:Exp) extends Exp
   case class LiftRef(e:Exp) extends Exp
@@ -246,6 +247,19 @@ object Base {
     }
     case RefExt(c) => c
 
+    case FunUpd(a,b,c) =>
+      // shorthand for updating a function used as a map
+      // (not essential, but serves to make generated code vastly more readable)
+      (evalms(env,a), evalms(env,b), evalms(env,c)) match {
+        case (Code(a), r2, r3) =>
+          val (Code(b), Code(c)) = (r2,r3) // if fun is code, x/y also need to be code
+          Code(reflect(FunUpd(a,b,c)))
+        case (r1, r2, r3) =>
+          val (v1, v2, v3, vI) = (Var(env.length),Var(env.length+1),Var(env.length+2),Var(env.length+4))
+          Clo(env++List(r1,r2,r3), If(Equs(v2,vI), v3, App(v1,vI)))
+          //throw new Exception(s"wrong funUpd: ${r1.toString} ${r2.getClass} ${r3.getClass}")
+      }
+
     case Lift(e) => 
       Code(lift(evalms(env,e)))
     case LiftRef(e) => 
@@ -394,6 +408,7 @@ object Base {
     case RefNew(a) => s"refNew(${pretty(a,env)})"
     case RefRead(a) => s"${pretty(a,env)}!"
     case RefWrite(a,b) => s"(${pretty(a,env)} := ${pretty(b,env)})"
+    case FunUpd(a,b,c) => s"(${pretty(a,env)} ${pretty(b,env)} -> ${pretty(c,env)})"
     case _ => e.toString
   }
 

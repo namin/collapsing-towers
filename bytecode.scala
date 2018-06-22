@@ -60,7 +60,7 @@ object Bytecode {
     (let pc 'L0
     (let mem 'nil
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect 5
 
@@ -70,7 +70,7 @@ object Bytecode {
     (let pc 'L0
     (let mem 'nil
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect 5
 
@@ -80,7 +80,7 @@ object Bytecode {
     (let pc 'L0
     (let mem 'nil
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect 5
 
@@ -90,7 +90,7 @@ object Bytecode {
     (let pc 'L0
     (let mem 'nil
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect 24
 
@@ -117,7 +117,7 @@ object Bytecode {
     (let pc 'L0
     (let mem 'nil
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect (2+3)
 
@@ -127,7 +127,7 @@ object Bytecode {
     (let pc 'L0
     (let mem 'nil
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect (2+3)
 
@@ -137,7 +137,7 @@ object Bytecode {
     (let pc 'L0
     (let mem 'nil
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect (if (2) (2 + 3) else (2 * 3))
 
@@ -148,7 +148,7 @@ object Bytecode {
     (let pc 'L0
     (let mem 'nil
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect ...
 */
@@ -304,31 +304,30 @@ val exec_poly_src = commonReplace("""
     (car (cdr ((find (lambda _ lb (eq? label (car lb)))) prog)))))
   ;; generic function update: fun[i -> x]
   ;;(let update (lambda _ fun (lambda _ i (lambda _ x
-  ;;  (maybe-lift-block (lambda _ j (if (eq? (maybe-lift-block i) j) x (fun j)))))))
-  (let update (lambda _ fun (lambda _ i (lambda _ x
-      ((((lift 'update) fun) (lift i)) x))))
+  ;;  (lambda _ j (if (eq? i j) x (fun j))))));;)
   ;; exec basic block, e.g. ((cst 0) (+) (jmp L1))
   (let loop (lambda loop block (lambda _ mem (lambda _ sp
     (let mem-get (lambda _ addr (mem (maybe-lift-block addr)))
+    (let mem-set (lambda _ addr (lambda _ val (funUpd mem (maybe-lift-block addr) val)))
     (let exp (car block)
-    (if (eq?  'cst    (car exp))    (((loop (cdr block)) (((update mem) sp) (maybe-lift (cadr exp)))) (+ sp 1))
-    (if (eq?  'geta   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem-get (cadr exp)))) (+ sp 1))
-    (if (eq?  'gets   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem-get (- (- sp 1) (cadr exp))))) (+ sp 1))
-    (if (eq?  'puts   (car exp))    (((loop (cdr block)) (((update mem) (- (- sp 1) (cadr exp))) (mem-get (- sp 1)))) (- sp 1))
+    (if (eq?  'cst    (car exp))    (((loop (cdr block)) ((mem-set sp) (maybe-lift (cadr exp)))) (+ sp 1))
+    (if (eq?  'geta   (car exp))    (((loop (cdr block)) ((mem-set sp) (mem-get (cadr exp)))) (+ sp 1))
+    (if (eq?  'gets   (car exp))    (((loop (cdr block)) ((mem-set sp) (mem-get (- (- sp 1) (cadr exp))))) (+ sp 1))
+    (if (eq?  'puts   (car exp))    (((loop (cdr block)) ((mem-set (- (- sp 1) (cadr exp))) (mem-get (- sp 1)))) (- sp 1))
     (if (eq?  'drop   (car exp))    (((loop (cdr block)) mem) (- sp (cadr exp)))
-    (if (eq?  '+      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (+ (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
-    (if (eq?  '-      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (- (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
-    (if (eq?  '*      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (* (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
-    (if (eq?  '=      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (eq? (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
+    (if (eq?  '+      (car exp))    (((loop (cdr block)) ((mem-set (- sp 2)) (+ (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
+    (if (eq?  '-      (car exp))    (((loop (cdr block)) ((mem-set (- sp 2)) (- (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
+    (if (eq?  '*      (car exp))    (((loop (cdr block)) ((mem-set (- sp 2)) (* (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
+    (if (eq?  '=      (car exp))    (((loop (cdr block)) ((mem-set (- sp 2)) (eq? (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
     (if (eq?  'halt   (car exp))    (mem-get (- sp 1))
     (if (eq?  'jmp    (car exp))    ((((exc prog) (cadr exp)) sp) mem)
     (if (eq?  'jif    (car exp))    (if (mem-get (- sp 1)) ((((exc prog) (cadr exp)) (- sp 1)) mem) ((((exc prog) (caddr exp)) (- sp 1)) mem))
-    'eob))))))))))))))))) ;; failure, end of block
+    'eob)))))))))))))))))) ;; failure, end of block
   ;;((find-block prog) pc)
   (let exc-block (maybe-lift-block (lambda _ mem
     (((loop ((find-block prog) pc)) mem) sp)))
   exc-block
-  ))))))))
+  )))))))
 """)
 
 val exec_src = exec_poly_src
