@@ -173,9 +173,9 @@ object Bytecode {
     (let ex $exec_comp_src
     (let prog (quote $test_src1)
     (let pc 'L0
-    (let mem 'nil
+    (let mem (lift 'nil)
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect let L0 = (\_. (2+3)) in (L0 _)
 
@@ -183,9 +183,9 @@ object Bytecode {
     (let ex $exec_comp_src
     (let prog (quote $test_src2)
     (let pc 'L0
-    (let mem 'nil
+    (let mem (lift 'nil)
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect let L0 = (let L1 = (\_. (2+3)) in (L1 _)) in (L0 _)
 
@@ -193,29 +193,27 @@ object Bytecode {
     (let ex $exec_comp_src
     (let prog (quote $test_src3)
     (let pc 'L0
-    (let mem 'nil
+    (let mem (lift 'nil)
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect let L0 = 
     //  if (2) (let L1 = (\_. (2+3)) in (L1 _))
     //  else   (let L2 = (\_. (2*3)) in (L2 _))
     // in (L0 _)
     // 
-    // NOTE how functions becomes nested. We will have (a lot of) duplication
+    // NOTE how functions become nested. We will have (a lot of) duplication
     // for control flow joins.
 
-/* TODO: need to figure out memory story
     run(s"""
     (let ex $exec_comp_src
     (let prog (quote $test_src4)
     (let pc 'L0
-    (let mem 'nil
+    (let mem (lift 'nil)
     (let sp 1000
-    ((((ex prog) pc) mem) sp))))))
+    ((((ex prog) pc) sp) mem))))))
     """)
     // expect ...
-*/
   }
 
 
@@ -257,7 +255,7 @@ val test_src3 = commonReplace("""
 )
 """)
 
-// factorial (tail recursive and maintaining stack height)
+// factorial (tail recursive, with accumulator, and maintaining stack height)
 val test_src4 = commonReplace("""
 (
   (L0 (
@@ -274,7 +272,7 @@ val test_src4 = commonReplace("""
     (gets 1);; acc
     (gets 3);; n
     (*)
-    (puts 2);; adjust stack height  n0 acc0 n1 acc1
+    (puts 2);; adjust stack height  n0 acc0 n1 acc1 -> n1 acc1
     (puts 2)
     (jmp L1))) ;;loop(n-1,acc*n)
   (L3 (;;n == 0
@@ -295,7 +293,7 @@ val test_src4 = commonReplace("""
 
 
 val exec_poly_src = commonReplace("""
-(lambda exc prog (lambda _ pc (lambda _ mem (lambda _ sp
+(lambda exc prog (lambda _ pc (lambda _ sp
   ;; generic list lookup: find (eq? a) (a b) = a
   (let find (lambda find p (lambda _ xs
     (if (pair? xs)
@@ -305,29 +303,32 @@ val exec_poly_src = commonReplace("""
   (let find-block (lambda _ prog (lambda _ label
     (car (cdr ((find (lambda _ lb (eq? label (car lb)))) prog)))))
   ;; generic function update: fun[i -> x]
+  ;;(let update (lambda _ fun (lambda _ i (lambda _ x
+  ;;  (maybe-lift-block (lambda _ j (if (eq? (maybe-lift-block i) j) x (fun j)))))))
   (let update (lambda _ fun (lambda _ i (lambda _ x
-    (lambda _ j (if (eq? i j) x (fun j))))))
+      ((((lift 'update) fun) (lift i)) x))))
   ;; exec basic block, e.g. ((cst 0) (+) (jmp L1))
   (let loop (lambda loop block (lambda _ mem (lambda _ sp
+    (let mem-get (lambda _ addr (mem (maybe-lift-block addr)))
     (let exp (car block)
     (if (eq?  'cst    (car exp))    (((loop (cdr block)) (((update mem) sp) (maybe-lift (cadr exp)))) (+ sp 1))
-    (if (eq?  'geta   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (cadr exp)))) (+ sp 1))
-    (if (eq?  'gets   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (- (- sp 1) (cadr exp))))) (+ sp 1))
-    (if (eq?  'puts   (car exp))    (((loop (cdr block)) (((update mem) (- (- sp 1) (cadr exp))) (mem (- sp 1)))) (- sp 1))
+    (if (eq?  'geta   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem-get (cadr exp)))) (+ sp 1))
+    (if (eq?  'gets   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem-get (- (- sp 1) (cadr exp))))) (+ sp 1))
+    (if (eq?  'puts   (car exp))    (((loop (cdr block)) (((update mem) (- (- sp 1) (cadr exp))) (mem-get (- sp 1)))) (- sp 1))
     (if (eq?  'drop   (car exp))    (((loop (cdr block)) mem) (- sp (cadr exp)))
-    (if (eq?  '+      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (+ (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
-    (if (eq?  '-      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (- (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
-    (if (eq?  '*      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (* (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
-    (if (eq?  '=      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (eq? (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
-    (if (eq?  'halt   (car exp))    (mem (- sp 1))
-    (if (eq?  'jmp    (car exp))    ((((exc prog) (cadr exp)) mem) sp)
-    (if (eq?  'jif    (car exp))    (if (mem (- sp 1)) ((((exc prog) (cadr exp)) mem) (- sp 1)) ((((exc prog) (caddr exp)) mem) (- sp 1)))
-    'eob)))))))))))))))) ;; failure, end of block
+    (if (eq?  '+      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (+ (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
+    (if (eq?  '-      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (- (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
+    (if (eq?  '*      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (* (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
+    (if (eq?  '=      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (eq? (mem-get (- sp 2)) (mem-get (- sp 1))))) (- sp 1))
+    (if (eq?  'halt   (car exp))    (mem-get (- sp 1))
+    (if (eq?  'jmp    (car exp))    ((((exc prog) (cadr exp)) sp) mem)
+    (if (eq?  'jif    (car exp))    (if (mem-get (- sp 1)) ((((exc prog) (cadr exp)) (- sp 1)) mem) ((((exc prog) (caddr exp)) (- sp 1)) mem))
+    'eob))))))))))))))))) ;; failure, end of block
   ;;((find-block prog) pc)
-  (let exc-block (maybe-lift-block (lambda _ _
+  (let exc-block (maybe-lift-block (lambda _ mem
     (((loop ((find-block prog) pc)) mem) sp)))
-  (exc-block (maybe-lift-block '_))
-  )))))))))
+  exc-block
+  ))))))))
 """)
 
 val exec_src = exec_poly_src
@@ -339,5 +340,7 @@ val exec_trace_src = exec_poly_src
 val exec_comp_src = exec_poly_src
                 .replace("maybe-lift-block", "lift")
                 .replace("maybe-lift", "lift")
+                .replace("""(let update (lambda _ fun (lambda _ i (lambda _ x
+      (maybe-lift-block (lambda _ j (if (eq? (maybe-lift-block i) j) x (fun j)))))))""", "XX")
 
 }
