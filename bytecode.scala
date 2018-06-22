@@ -12,7 +12,7 @@ import parser._
 -     extend to handle function calls (?)
 - 3) stage-polymorphic bytecode interpreter
 +     pure tracing
--     lift basic blocks as functions
++     lift basic blocks as functions
 -     memoization for recursion
 - 4) extract fac code, dissolving bytecode level
 
@@ -29,9 +29,14 @@ Questions:
   - what exactly should be dynamic?
       contents of memory
       entire memory, addresses, sp
+      - 1) sp static, mem dynamic
+      - 2) perhaps block becomes n nested functions where n = sp, each stack slot an arg?
 
   - PyPy paper has a register-based evaluator: 
     https://www3.hhu.de/stups/downloads/pdf/BoCuFiRi09_246.pdf
+
+  - Glück's self-applicable online PE for flowchart has nested expressions
+    https://pdfs.semanticscholar.org/8a49/462da3f61ad6c2fafc8bc884eff129958532.pdf  
 */
 
 
@@ -252,7 +257,7 @@ val test_src3 = commonReplace("""
 )
 """)
 
-// factorial (tail recursive but growing stack -- don't bother mutating stuff in place ...)
+// factorial (tail recursive and maintaining stack height)
 val test_src4 = commonReplace("""
 (
   (L0 (
@@ -269,6 +274,8 @@ val test_src4 = commonReplace("""
     (gets 1);; acc
     (gets 3);; n
     (*)
+    (puts 2);; adjust stack height  n0 acc0 n1 acc1
+    (puts 2)
     (jmp L1))) ;;loop(n-1,acc*n)
   (L3 (;;n == 0
     (halt))) ;;return acc
@@ -306,6 +313,8 @@ val exec_poly_src = commonReplace("""
     (if (eq?  'cst    (car exp))    (((loop (cdr block)) (((update mem) sp) (maybe-lift (cadr exp)))) (+ sp 1))
     (if (eq?  'geta   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (cadr exp)))) (+ sp 1))
     (if (eq?  'gets   (car exp))    (((loop (cdr block)) (((update mem) sp) (mem (- (- sp 1) (cadr exp))))) (+ sp 1))
+    (if (eq?  'puts   (car exp))    (((loop (cdr block)) (((update mem) (- (- sp 1) (cadr exp))) (mem (- sp 1)))) (- sp 1))
+    (if (eq?  'drop   (car exp))    (((loop (cdr block)) mem) (- sp (cadr exp)))
     (if (eq?  '+      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (+ (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
     (if (eq?  '-      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (- (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
     (if (eq?  '*      (car exp))    (((loop (cdr block)) (((update mem) (- sp 2)) (* (mem (- sp 2)) (mem (- sp 1))))) (- sp 1))
@@ -313,7 +322,7 @@ val exec_poly_src = commonReplace("""
     (if (eq?  'halt   (car exp))    (mem (- sp 1))
     (if (eq?  'jmp    (car exp))    ((((exc prog) (cadr exp)) mem) sp)
     (if (eq?  'jif    (car exp))    (if (mem (- sp 1)) ((((exc prog) (cadr exp)) mem) (- sp 1)) ((((exc prog) (caddr exp)) mem) (- sp 1)))
-    'eob)))))))))))))) ;; failure, end of block
+    'eob)))))))))))))))) ;; failure, end of block
   ;;((find-block prog) pc)
   (let exc-block (maybe-lift-block (lambda _ _
     (((loop ((find-block prog) pc)) mem) sp)))
