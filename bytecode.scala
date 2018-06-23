@@ -7,25 +7,32 @@ import parser._
 
 /*
 + 1) bytecode interpreter
-+ 2) run factorial
-+     loop + accumulator
--     extend to handle function calls (?)
-- 3) stage-polymorphic bytecode interpreter
++ 2) test: run factorial
++     loop + accumulator version
++ 3) stage-polymorphic bytecode interpreter
 +     pure tracing
 +     lift basic blocks as functions
--     memoization for recursion
-- 4) extract fac code, dissolving bytecode level
++     memoization for recursion
++ 4) test: extract fac code, dissolving bytecode level
++     there is some memory indirection overhead though
 
 - 5) metacircular evaluator
-- 6) dissolve multiple interpretation levels
+- 6) test: dissolve multiple interpretation levels
+
+- 7) lambda calculus interpreter (CEK machine)
+- 8) test: translate lambda to lambda, eliminating low-level layers
+
+- extend to handle function calls (primitive or explicit stack?)
+- can we remove memory indirection overhead?
+
+- next step: start building a meta-circular evaluator, 
+             bottom up from exec. add functionality to 
+             run test cases one by one.
 */
 
 /*
-TODO: 
-  - to support recursion, memory needs to 
-    be dynamic
-
 Questions:
+  - to support loops/recursion, memory needs to be dynamic
   - what exactly should be dynamic?
       contents of memory
       entire memory, addresses, sp
@@ -35,10 +42,20 @@ Questions:
   - PyPy paper has a register-based evaluator: 
     https://www3.hhu.de/stups/downloads/pdf/BoCuFiRi09_246.pdf
 
-  - Glück's self-applicable online PE for flowchart has nested expressions
+  - Glück's self-applicable online PE for flowchart has 3-addr code but calls as exprs:
     https://pdfs.semanticscholar.org/8a49/462da3f61ad6c2fafc8bc884eff129958532.pdf  
 */
 
+/*
+TODO (cleanup):
+  - macros for fun def and call with multiple args
+  - print statement (use `log`?)
+  - more informative pretty printing of values
+  - reduce code duplication between testBasic* functions and within
+    (currently it's useful to tweak / comment individual bits)
+  - proper tests with expected values
+  - testBasicCompBC should run and test generated code
+*/
 
 object Bytecode {
 
