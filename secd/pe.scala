@@ -23,7 +23,7 @@ object PE {
 
 (let _ '(debug (car ops))
 
-(if (eq? 'STOP (car ops)) s
+(if (eq? 'STOP (car ops)) (mla s)
 (if (eq? 'WRITEC (car ops)) (car s)
 (if (eq? 'LDC (car ops))
 (((((machine (cons (maybe-lift (cadr ops)) s)) d) fns) (cddr ops)) env)
@@ -127,7 +127,7 @@ RTN) AP WRITEC)"""
     println(reifyc(ev(s"""($cmp '(NIL LDC 135 CONS
 LDF (LDC 10 LD (1 1) ADD RTN)
 AP
-WRITEC))"""))) // TODO: STOP doesn't work
+STOP))""")))
 
     println("evaluating factorial")
     check(ev(s"(($evl $factorialProg) '())"))("Cst(3628800)")
