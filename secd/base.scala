@@ -22,6 +22,7 @@ object Base {
   case class IsNum(a:Exp) extends Exp
   case class IsStr(a:Exp) extends Exp
   case class IsCons(a:Exp) extends Exp
+  case class IsCode(a:Exp) extends Exp
   case class Lift(e:Exp) extends Exp
   case class Run(b:Exp,e:Exp) extends Exp
   case class Log(b:Exp,e:Exp) extends Exp
@@ -37,7 +38,9 @@ object Base {
   abstract class Val
   case class Cst(n:Int) extends Val
   case class Str(s:String) extends Val
-  case class Clo(env:Env,e:Exp) extends Val
+  case class Clo(env:Env,e:Exp) extends Val {
+    override def toString = s"Clo(_, $e)"
+  }
   case class Tup(v1:Val,v2:Val) extends Val
 
   case class Code(e:Exp) extends Val
@@ -95,6 +98,8 @@ object Base {
       reflect(IsStr(anf(env,e)))
     case IsCons(e) =>
       reflect(IsCons(anf(env,e)))
+    case IsCode(e) =>
+      reflect(IsCode(anf(env,e)))
     case Fst(e) =>
       reflect(Fst(anf(env,e)))
     case Snd(e) =>
@@ -274,6 +279,12 @@ object Base {
           Code(reflect(IsCons(s1)))
         case v => 
           Cst(if (v.isInstanceOf[Tup]) 1 else 0)
+      }
+
+     case IsCode(e1) =>
+      (evalms(env,e1)) match {
+        case v => 
+          Cst(if (v.isInstanceOf[Code]) 1 else 0)
       }
 
     // special forms: custom eval, ...

@@ -49,6 +49,7 @@ object Lisp {
     case Tup(Str("num?"),   Tup(a,N)) => IsNum(trans(a,env))
     case Tup(Str("sym?"),   Tup(a,N)) => IsStr(trans(a,env))
     case Tup(Str("pair?"),  Tup(a,N)) => IsCons(trans(a,env))
+    case Tup(Str("code?"),  Tup(a,N)) => IsCode(trans(a,env))
     case Tup(Str("cons"),   Tup(a,Tup(b,N))) => Cons(trans(a,env),trans(b,env))
     case Tup(Str("car"),    Tup(a,N)) => Fst(trans(a,env))
     case Tup(Str("cdr"),    Tup(a,N)) => Snd(trans(a,env))
@@ -199,7 +200,7 @@ object Lisp {
     checkrun(s"""
       (let code (lambda _ _ (lift (lambda f x x)))
         (run 0 (code 'dummy)))
-    ""","Clo(List(Clo(List(),Lift(Lam(Var(3))))),Var(2))")
+    ""","Clo(_, Var(2))")
 
     // Disregarding the embedded closure environment that 
     // includes the value of `code`, the result can be 
